@@ -37,13 +37,14 @@ SELECT
     scalar_parent_browser_engagement_unique_domains_count[1].value as unique_tlds
 FROM longitudinal l LEFT OUTER JOIN non_system_addons
 ON l.client_id = non_system_addons.client_id
+WHERE l.normalized_channel='release' AND l.build IS NOT NULL AND l.build[1].application_name='Firefox'
 """)
 
 rdd = frame.rdd
 ```
 
-    CPU times: user 128 ms, sys: 28 ms, total: 156 ms
-    Wall time: 18min 16s
+    CPU times: user 264 ms, sys: 100 ms, total: 364 ms
+    Wall time: 21min 7s
 
 
 ## Loading addon data (AMO)
@@ -160,8 +161,8 @@ results = rdd\
     .collect()
 ```
 
-    CPU times: user 9.54 s, sys: 468 ms, total: 10 s
-    Wall time: 11min 5s
+    CPU times: user 10.4 s, sys: 560 ms, total: 10.9 s
+    Wall time: 10min 54s
 
 
 
@@ -250,19 +251,19 @@ sorted_dataframe(df, individual_counts)
   <tbody>
     <tr>
       <th>locale</th>
-      <td>0.89227</td>
+      <td>0.99976</td>
     </tr>
     <tr>
       <th>collaborative</th>
-      <td>0.37663</td>
+      <td>0.43659</td>
     </tr>
     <tr>
       <th>similarity</th>
-      <td>0.27520</td>
+      <td>0.30877</td>
     </tr>
     <tr>
       <th>legacy</th>
-      <td>0.01470</td>
+      <td>0.01713</td>
     </tr>
   </tbody>
 </table>
@@ -333,7 +334,7 @@ sorted_dataframe(df, results.values())
       <td></td>
       <td></td>
       <td></td>
-      <td>0.38608</td>
+      <td>0.42048</td>
     </tr>
     <tr>
       <th>3</th>
@@ -341,7 +342,7 @@ sorted_dataframe(df, results.values())
       <td></td>
       <td>Available</td>
       <td></td>
-      <td>0.22323</td>
+      <td>0.26145</td>
     </tr>
     <tr>
       <th>0</th>
@@ -349,7 +350,7 @@ sorted_dataframe(df, results.values())
       <td></td>
       <td>Available</td>
       <td>Available</td>
-      <td>0.13861</td>
+      <td>0.15791</td>
     </tr>
     <tr>
       <th>5</th>
@@ -357,15 +358,7 @@ sorted_dataframe(df, results.values())
       <td></td>
       <td></td>
       <td>Available</td>
-      <td>0.12965</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>0.10762</td>
+      <td>0.14279</td>
     </tr>
     <tr>
       <th>10</th>
@@ -373,7 +366,7 @@ sorted_dataframe(df, results.values())
       <td>Available</td>
       <td>Available</td>
       <td></td>
-      <td>0.00781</td>
+      <td>0.00913</td>
     </tr>
     <tr>
       <th>7</th>
@@ -381,7 +374,15 @@ sorted_dataframe(df, results.values())
       <td>Available</td>
       <td>Available</td>
       <td>Available</td>
-      <td>0.00689</td>
+      <td>0.00800</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.00011</td>
     </tr>
     <tr>
       <th>6</th>
@@ -389,7 +390,7 @@ sorted_dataframe(df, results.values())
       <td></td>
       <td>Available</td>
       <td></td>
-      <td>0.00005</td>
+      <td>0.00006</td>
     </tr>
     <tr>
       <th>9</th>
@@ -492,7 +493,7 @@ for num, group in groupby(sorted(results.keys(), key=sum), sum):
       <td></td>
       <td></td>
       <td></td>
-      <td>0.10762</td>
+      <td>0.00011</td>
       <td>1.00000</td>
     </tr>
   </tbody>
@@ -525,8 +526,8 @@ for num, group in groupby(sorted(results.keys(), key=sum), sum):
       <td></td>
       <td></td>
       <td></td>
-      <td>0.38608</td>
-      <td>0.99979</td>
+      <td>0.42048</td>
+      <td>0.99978</td>
     </tr>
     <tr>
       <th>1</th>
@@ -534,8 +535,8 @@ for num, group in groupby(sorted(results.keys(), key=sum), sum):
       <td></td>
       <td>Available</td>
       <td></td>
-      <td>0.00005</td>
-      <td>0.00014</td>
+      <td>0.00006</td>
+      <td>0.00015</td>
     </tr>
     <tr>
       <th>2</th>
@@ -576,8 +577,8 @@ for num, group in groupby(sorted(results.keys(), key=sum), sum):
       <td></td>
       <td>Available</td>
       <td></td>
-      <td>0.22323</td>
-      <td>0.63255</td>
+      <td>0.26145</td>
+      <td>0.64671</td>
     </tr>
     <tr>
       <th>1</th>
@@ -585,8 +586,8 @@ for num, group in groupby(sorted(results.keys(), key=sum), sum):
       <td></td>
       <td></td>
       <td>Available</td>
-      <td>0.12965</td>
-      <td>0.36736</td>
+      <td>0.14279</td>
+      <td>0.35321</td>
     </tr>
     <tr>
       <th>3</th>
@@ -636,8 +637,8 @@ for num, group in groupby(sorted(results.keys(), key=sum), sum):
       <td></td>
       <td>Available</td>
       <td>Available</td>
-      <td>0.13861</td>
-      <td>0.94667</td>
+      <td>0.15791</td>
+      <td>0.94534</td>
     </tr>
     <tr>
       <th>2</th>
@@ -645,8 +646,8 @@ for num, group in groupby(sorted(results.keys(), key=sum), sum):
       <td>Available</td>
       <td>Available</td>
       <td></td>
-      <td>0.00781</td>
-      <td>0.05332</td>
+      <td>0.00913</td>
+      <td>0.05465</td>
     </tr>
     <tr>
       <th>1</th>
@@ -687,7 +688,7 @@ for num, group in groupby(sorted(results.keys(), key=sum), sum):
       <td>Available</td>
       <td>Available</td>
       <td>Available</td>
-      <td>0.00689</td>
+      <td>0.00800</td>
       <td>1.00000</td>
     </tr>
   </tbody>
