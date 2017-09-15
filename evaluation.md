@@ -11,9 +11,15 @@ This notebook either needs to be executed in the [TAAR](http://github.com/mozill
 ```python
 %%time
 frame = sqlContext.sql("""
-WITH addons AS (
-    SELECT client_id, feature_row.*
+WITH valid_clients AS (
+    SELECT *
     FROM longitudinal
+    WHERE normalized_channel='release' AND build IS NOT NULL AND build[1].application_name='Firefox'
+),
+
+addons AS (
+    SELECT client_id, feature_row.*
+    FROM valid_clients
     LATERAL VIEW explode(active_addons[1]) feature_row
 ),
     
@@ -35,16 +41,15 @@ SELECT
     scalar_parent_browser_engagement_tab_open_event_count[1].value as tab_open_count,
     places_bookmarks_count[1].sum as bookmark_count,
     scalar_parent_browser_engagement_unique_domains_count[1].value as unique_tlds
-FROM longitudinal l LEFT OUTER JOIN non_system_addons
+FROM valid_clients l LEFT OUTER JOIN non_system_addons
 ON l.client_id = non_system_addons.client_id
-WHERE l.normalized_channel='release' AND l.build IS NOT NULL AND l.build[1].application_name='Firefox'
 """)
 
 rdd = frame.rdd
 ```
 
-    CPU times: user 264 ms, sys: 100 ms, total: 364 ms
-    Wall time: 21min 7s
+    CPU times: user 160 ms, sys: 28 ms, total: 188 ms
+    Wall time: 19min 12s
 
 
 ## Loading addon data (AMO)
@@ -161,8 +166,8 @@ results = rdd\
     .collect()
 ```
 
-    CPU times: user 10.4 s, sys: 560 ms, total: 10.9 s
-    Wall time: 10min 54s
+    CPU times: user 11.2 s, sys: 416 ms, total: 11.6 s
+    Wall time: 11min 56s
 
 
 
