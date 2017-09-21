@@ -125,6 +125,7 @@ def complete_client_data(client_data):
     client['disabled_addon_ids'] = get_legacy_addons(client['installed_addons'])
     client['locale'] = str(client['locale'])
     client['profile_age_in_weeks'] = compute_weeks_ago(client['profile_date'])
+    client['submission_age_in_weeks'] = compute_weeks_ago(client['submission_date'])
     
     return client
 ```
@@ -798,8 +799,8 @@ combinations = nonzero_combinations(conditioned_results)
 
 
 ```python
-def display_individual_filtered_results(conditioned_results, combinations):
-    display(Markdown("### Filtering on the profile age, Python-like exclusive ranges"))
+def display_individual_filtered_results(conditioned_results, combinations, label):
+    display(Markdown("### Filtering on the %s, Python-like exclusive ranges" % label))
 
     counts = []
     titles = []
@@ -828,7 +829,7 @@ def display_individual_filtered_results(conditioned_results, combinations):
 
 
 ```python
-counts, titles = display_individual_filtered_results(conditioned_results, combinations)
+counts, titles = display_individual_filtered_results(conditioned_results, combinations, label="profile age")
 ```
 
 
@@ -854,7 +855,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
   </thead>
   <tbody>
     <tr>
-      <th>9</th>
+      <th>1</th>
       <td>Available</td>
       <td></td>
       <td></td>
@@ -862,7 +863,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.56426</td>
     </tr>
     <tr>
-      <th>2</th>
+      <th>3</th>
       <td>Available</td>
       <td></td>
       <td>Available</td>
@@ -870,7 +871,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.24668</td>
     </tr>
     <tr>
-      <th>4</th>
+      <th>5</th>
       <td>Available</td>
       <td></td>
       <td></td>
@@ -886,7 +887,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.06858</td>
     </tr>
     <tr>
-      <th>1</th>
+      <th>10</th>
       <td>Available</td>
       <td>Available</td>
       <td>Available</td>
@@ -894,7 +895,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.00447</td>
     </tr>
     <tr>
-      <th>6</th>
+      <th>7</th>
       <td>Available</td>
       <td>Available</td>
       <td>Available</td>
@@ -902,7 +903,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.00304</td>
     </tr>
     <tr>
-      <th>7</th>
+      <th>8</th>
       <td></td>
       <td></td>
       <td></td>
@@ -910,26 +911,42 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.00006</td>
     </tr>
     <tr>
-      <th>3</th>
-      <td></td>
-      <td></td>
+      <th>2</th>
       <td></td>
       <td>Available</td>
-      <td>0.00000</td>
-    </tr>
-    <tr>
-      <th>5</th>
-      <td></td>
-      <td></td>
       <td>Available</td>
       <td></td>
       <td>0.00000</td>
     </tr>
     <tr>
-      <th>8</th>
+      <th>4</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <th>6</th>
       <td></td>
       <td></td>
       <td>Available</td>
+      <td></td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td></td>
+      <td></td>
+      <td></td>
       <td>Available</td>
       <td>0.00000</td>
     </tr>
@@ -957,7 +974,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
   </thead>
   <tbody>
     <tr>
-      <th>9</th>
+      <th>1</th>
       <td>Available</td>
       <td></td>
       <td></td>
@@ -965,7 +982,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.55178</td>
     </tr>
     <tr>
-      <th>2</th>
+      <th>3</th>
       <td>Available</td>
       <td></td>
       <td>Available</td>
@@ -973,7 +990,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.21705</td>
     </tr>
     <tr>
-      <th>4</th>
+      <th>5</th>
       <td>Available</td>
       <td></td>
       <td></td>
@@ -989,7 +1006,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.08284</td>
     </tr>
     <tr>
-      <th>1</th>
+      <th>10</th>
       <td>Available</td>
       <td>Available</td>
       <td>Available</td>
@@ -997,7 +1014,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.00407</td>
     </tr>
     <tr>
-      <th>6</th>
+      <th>7</th>
       <td>Available</td>
       <td>Available</td>
       <td>Available</td>
@@ -1005,18 +1022,10 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.00307</td>
     </tr>
     <tr>
-      <th>5</th>
+      <th>6</th>
       <td></td>
       <td></td>
       <td>Available</td>
-      <td></td>
-      <td>0.00008</td>
-    </tr>
-    <tr>
-      <th>7</th>
-      <td></td>
-      <td></td>
-      <td></td>
       <td></td>
       <td>0.00008</td>
     </tr>
@@ -1024,12 +1033,36 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <th>8</th>
       <td></td>
       <td></td>
+      <td></td>
+      <td></td>
+      <td>0.00008</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td></td>
+      <td></td>
       <td>Available</td>
       <td>Available</td>
       <td>0.00001</td>
     </tr>
     <tr>
-      <th>3</th>
+      <th>2</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <th>11</th>
       <td></td>
       <td></td>
       <td></td>
@@ -1060,7 +1093,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
   </thead>
   <tbody>
     <tr>
-      <th>9</th>
+      <th>1</th>
       <td>Available</td>
       <td></td>
       <td></td>
@@ -1068,7 +1101,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.52717</td>
     </tr>
     <tr>
-      <th>2</th>
+      <th>3</th>
       <td>Available</td>
       <td></td>
       <td>Available</td>
@@ -1076,7 +1109,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.22324</td>
     </tr>
     <tr>
-      <th>4</th>
+      <th>5</th>
       <td>Available</td>
       <td></td>
       <td></td>
@@ -1092,7 +1125,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.09279</td>
     </tr>
     <tr>
-      <th>1</th>
+      <th>10</th>
       <td>Available</td>
       <td>Available</td>
       <td>Available</td>
@@ -1100,7 +1133,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.00400</td>
     </tr>
     <tr>
-      <th>6</th>
+      <th>7</th>
       <td>Available</td>
       <td>Available</td>
       <td>Available</td>
@@ -1108,7 +1141,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.00344</td>
     </tr>
     <tr>
-      <th>7</th>
+      <th>8</th>
       <td></td>
       <td></td>
       <td></td>
@@ -1116,7 +1149,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.00006</td>
     </tr>
     <tr>
-      <th>5</th>
+      <th>6</th>
       <td></td>
       <td></td>
       <td>Available</td>
@@ -1124,7 +1157,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.00003</td>
     </tr>
     <tr>
-      <th>8</th>
+      <th>9</th>
       <td></td>
       <td></td>
       <td>Available</td>
@@ -1132,12 +1165,28 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.00003</td>
     </tr>
     <tr>
-      <th>3</th>
+      <th>11</th>
       <td></td>
       <td></td>
       <td></td>
       <td>Available</td>
       <td>0.00001</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00000</td>
     </tr>
   </tbody>
 </table>
@@ -1163,7 +1212,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
   </thead>
   <tbody>
     <tr>
-      <th>9</th>
+      <th>1</th>
       <td>Available</td>
       <td></td>
       <td></td>
@@ -1171,7 +1220,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.52334</td>
     </tr>
     <tr>
-      <th>2</th>
+      <th>3</th>
       <td>Available</td>
       <td></td>
       <td>Available</td>
@@ -1179,7 +1228,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.22640</td>
     </tr>
     <tr>
-      <th>4</th>
+      <th>5</th>
       <td>Available</td>
       <td></td>
       <td></td>
@@ -1195,7 +1244,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.09773</td>
     </tr>
     <tr>
-      <th>1</th>
+      <th>10</th>
       <td>Available</td>
       <td>Available</td>
       <td>Available</td>
@@ -1203,7 +1252,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.00421</td>
     </tr>
     <tr>
-      <th>6</th>
+      <th>7</th>
       <td>Available</td>
       <td>Available</td>
       <td>Available</td>
@@ -1211,7 +1260,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.00375</td>
     </tr>
     <tr>
-      <th>7</th>
+      <th>8</th>
       <td></td>
       <td></td>
       <td></td>
@@ -1219,7 +1268,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.00006</td>
     </tr>
     <tr>
-      <th>5</th>
+      <th>6</th>
       <td></td>
       <td></td>
       <td>Available</td>
@@ -1227,7 +1276,7 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.00003</td>
     </tr>
     <tr>
-      <th>8</th>
+      <th>9</th>
       <td></td>
       <td></td>
       <td>Available</td>
@@ -1235,7 +1284,23 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td>0.00002</td>
     </tr>
     <tr>
-      <th>3</th>
+      <th>2</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <th>11</th>
       <td></td>
       <td></td>
       <td></td>
@@ -1251,25 +1316,25 @@ To make things a little bit easier to read, we can display all results in a sing
 
 
 ```python
-def display_merged_filtered_results(counts, titles, total_results, combinations):
+def display_merged_filtered_results(counts, titles, total_results, combinations, label):
     values = [total_results[sub_key] for sub_key in combinations]
     sub_counts = get_relative_counts(values)
     counts.append(sub_counts)
     titles.append("Total, without any condition")  
 
     columns = recommenders.keys() + titles
-    data = format_data(results.keys(), counts)
+    data = format_data(combinations, counts)
 
     df = DataFrame(columns=columns, data=data)
     df = sorted_dataframe(df, counts[0])
 
-    display(Markdown("### Filtering on the profile age, Python-like exclusive ranges – All in one table"))
+    display(Markdown("### Filtering on the %s, Python-like exclusive ranges – All in one table" % label))
     display(df)
 ```
 
 
 ```python
-display_merged_filtered_results(counts, titles, total_results, combinations)
+display_merged_filtered_results(counts, titles, total_results, combinations, label="profile age")
 ```
 
 
@@ -1296,10 +1361,10 @@ display_merged_filtered_results(counts, titles, total_results, combinations)
   <tbody>
     <tr>
       <th>9</th>
+      <td>Available</td>
       <td></td>
       <td></td>
-      <td>Available</td>
-      <td>Available</td>
+      <td></td>
       <td>0.56426</td>
       <td>0.55178</td>
       <td>0.52717</td>
@@ -1308,9 +1373,9 @@ display_merged_filtered_results(counts, titles, total_results, combinations)
     </tr>
     <tr>
       <th>2</th>
+      <td>Available</td>
       <td></td>
-      <td></td>
-      <td></td>
+      <td>Available</td>
       <td></td>
       <td>0.24668</td>
       <td>0.21705</td>
@@ -1320,9 +1385,9 @@ display_merged_filtered_results(counts, titles, total_results, combinations)
     </tr>
     <tr>
       <th>4</th>
+      <td>Available</td>
       <td></td>
-      <td>Available</td>
-      <td>Available</td>
+      <td></td>
       <td>Available</td>
       <td>0.11291</td>
       <td>0.14102</td>
@@ -1345,8 +1410,8 @@ display_merged_filtered_results(counts, titles, total_results, combinations)
     <tr>
       <th>1</th>
       <td>Available</td>
-      <td></td>
-      <td></td>
+      <td>Available</td>
+      <td>Available</td>
       <td></td>
       <td>0.00447</td>
       <td>0.00407</td>
@@ -1356,10 +1421,10 @@ display_merged_filtered_results(counts, titles, total_results, combinations)
     </tr>
     <tr>
       <th>6</th>
-      <td></td>
-      <td></td>
       <td>Available</td>
-      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
       <td>0.00304</td>
       <td>0.00307</td>
       <td>0.00344</td>
@@ -1368,10 +1433,10 @@ display_merged_filtered_results(counts, titles, total_results, combinations)
     </tr>
     <tr>
       <th>7</th>
-      <td>Available</td>
-      <td>Available</td>
-      <td>Available</td>
-      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
       <td>0.00006</td>
       <td>0.00008</td>
       <td>0.00006</td>
@@ -1380,10 +1445,10 @@ display_merged_filtered_results(counts, titles, total_results, combinations)
     </tr>
     <tr>
       <th>3</th>
-      <td>Available</td>
+      <td></td>
+      <td></td>
       <td></td>
       <td>Available</td>
-      <td></td>
       <td>0.00000</td>
       <td>0.00000</td>
       <td>0.00001</td>
@@ -1392,10 +1457,10 @@ display_merged_filtered_results(counts, titles, total_results, combinations)
     </tr>
     <tr>
       <th>5</th>
-      <td>Available</td>
       <td></td>
       <td></td>
       <td>Available</td>
+      <td></td>
       <td>0.00000</td>
       <td>0.00008</td>
       <td>0.00003</td>
@@ -1405,9 +1470,9 @@ display_merged_filtered_results(counts, titles, total_results, combinations)
     <tr>
       <th>8</th>
       <td></td>
-      <td>Available</td>
-      <td>Available</td>
       <td></td>
+      <td>Available</td>
+      <td>Available</td>
       <td>0.00000</td>
       <td>0.00001</td>
       <td>0.00003</td>
@@ -1423,12 +1488,664 @@ display_merged_filtered_results(counts, titles, total_results, combinations)
 
 
 ```python
-%time conditioned_results = get_conditioned_results("submission_date", conditions)
+%time conditioned_results_submission_date = get_conditioned_results("submission_age_in_weeks", conditions)
 ```
 
 
 ```python
-combinations = nonzero_combinations(conditioned_results)
-counts, titles = display_individual_filtered_results(conditioned_results, combinations)
-display_merged_filtered_results(counts, titles, total_results, combinations)
+label = "submission date"
+combinations = nonzero_combinations(conditioned_results_submission_date)
+counts, titles = display_individual_filtered_results(conditioned_results_submission_date, combinations, label)
+display_merged_filtered_results(counts, titles, total_results, combinations, label)
 ```
+
+
+### Filtering on the submission date, Python-like exclusive ranges
+
+
+
+#### Between 0 and 1 weeks
+
+
+
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>locale</th>
+      <th>legacy</th>
+      <th>collaborative</th>
+      <th>similarity</th>
+      <th>Relative counts</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1</th>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.28043</td>
+    </tr>
+    <tr>
+      <th>0</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.25749</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>0.23062</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>0.20527</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.01489</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.01114</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.00005</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00004</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00003</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00003</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00000</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+
+#### Between 1 and 2 weeks
+
+
+
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>locale</th>
+      <th>legacy</th>
+      <th>collaborative</th>
+      <th>similarity</th>
+      <th>Relative counts</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1</th>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.41392</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>0.25433</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>0.15828</td>
+    </tr>
+    <tr>
+      <th>0</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.15660</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00968</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00701</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.00009</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00004</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00003</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00003</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00000</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+
+#### Between 2 and 3 weeks
+
+
+
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>locale</th>
+      <th>legacy</th>
+      <th>collaborative</th>
+      <th>similarity</th>
+      <th>Relative counts</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1</th>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.46368</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>0.26353</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>0.13141</td>
+    </tr>
+    <tr>
+      <th>0</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.12639</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00911</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00568</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.00011</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00005</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00002</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00002</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00000</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+
+#### Between 3 and 4 weeks
+
+
+
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>locale</th>
+      <th>legacy</th>
+      <th>collaborative</th>
+      <th>similarity</th>
+      <th>Relative counts</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1</th>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.48052</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>0.26312</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>0.12283</td>
+    </tr>
+    <tr>
+      <th>0</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.11945</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00870</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00514</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.00015</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00003</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00003</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00002</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00000</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+
+### Filtering on the submission date, Python-like exclusive ranges – All in one table
+
+
+
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>locale</th>
+      <th>legacy</th>
+      <th>collaborative</th>
+      <th>similarity</th>
+      <th>Between 0 and 1 weeks</th>
+      <th>Between 1 and 2 weeks</th>
+      <th>Between 2 and 3 weeks</th>
+      <th>Between 3 and 4 weeks</th>
+      <th>Total, without any condition</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1</th>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.28043</td>
+      <td>0.41392</td>
+      <td>0.46368</td>
+      <td>0.48052</td>
+      <td>0.44747</td>
+    </tr>
+    <tr>
+      <th>0</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.25749</td>
+      <td>0.15660</td>
+      <td>0.12639</td>
+      <td>0.11945</td>
+      <td>0.14333</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>0.23062</td>
+      <td>0.25433</td>
+      <td>0.26353</td>
+      <td>0.26312</td>
+      <td>0.26032</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>0.20527</td>
+      <td>0.15828</td>
+      <td>0.13141</td>
+      <td>0.12283</td>
+      <td>0.13290</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.01489</td>
+      <td>0.00701</td>
+      <td>0.00568</td>
+      <td>0.00514</td>
+      <td>0.00710</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.01114</td>
+      <td>0.00968</td>
+      <td>0.00911</td>
+      <td>0.00870</td>
+      <td>0.00865</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.00005</td>
+      <td>0.00009</td>
+      <td>0.00011</td>
+      <td>0.00015</td>
+      <td>0.00011</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00004</td>
+      <td>0.00003</td>
+      <td>0.00002</td>
+      <td>0.00003</td>
+      <td>0.00003</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00003</td>
+      <td>0.00004</td>
+      <td>0.00005</td>
+      <td>0.00003</td>
+      <td>0.00006</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00003</td>
+      <td>0.00003</td>
+      <td>0.00002</td>
+      <td>0.00002</td>
+      <td>0.00003</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00000</td>
+      <td>0.00000</td>
+      <td>0.00000</td>
+      <td>0.00000</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00000</td>
+      <td>0.00000</td>
+      <td>0.00000</td>
+      <td>0.00000</td>
+      <td>0.00000</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
