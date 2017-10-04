@@ -1771,6 +1771,17 @@ display_merged_filtered_results(counts, titles, total_results, combinations, lab
 
 ## Addon counts
 
+We want to train an ensemble model using the individual recommenders that we already have. To optimize this ensemble model, we need some training data. We have information about what addons different users have installed, so it would make sense to check if our ensemble model would also recommend these addons to the respective users.
+
+However, there is one fundamental conflict here: To be able to make recommendations, the collaborative recommender already needs some information about which addons a user has installed. Thus, we can only use a subset of a user's installed addons for evaluation. These addons are masked and the collaborative recommender then only uses the unmasked addons. The open question is how large this subset of masked addons should be.
+
+Choosing this size is a trade-off between three factors:
+1. By masking more addons, we give the evaluation function more data to work with
+2. If we mask fewer addons, the collaborative filter can make better recommendations
+3. There are not that many users who have many addons installed. This means we need to be careful not to make our evaluation set too biased. For example, if we always mask at least five addons, then only users with more than six addons could be part of the evaluation set, which is a small subset of the entire population
+
+To be able to make this decision, it's helpful to look at the distribution of the number of addons that users have installed.
+
 
 ```python
 import matplotlib.pyplot as plt
@@ -1833,6 +1844,8 @@ plot_addon_distribution(addon_counts)
 ![png](output_71_1.png)
 
 
+As we can see, there is a substantial number of users that have no addons installed. Nearly all other users have fewer than 10 addons installed. To make the plot a bit easier to read, it's helpful to hide the long tail.
+
 
 ```python
 reasonable_addon_counts = filter(lambda (num_addons, count): num_addons < 20, addon_counts)
@@ -1840,12 +1853,16 @@ plot_addon_distribution(reasonable_addon_counts)
 ```
 
 
-![png](output_72_0.png)
+![png](output_73_0.png)
 
 
 
-![png](output_72_1.png)
+![png](output_73_1.png)
 
+
+$\implies$ To get an evaluation set of a decent size that's at least partly representative, it's important to include users that only have a few addons installed. One idea could be to mask half of the addons that users in the evaluation set have installed. This way, we would be able to include users that only have a few addons installed. If the number of addons is odd, we could uniformly randomly round up or down.
+
+The alternative would be to make the portion of masked addons a little bit higher or lower. This could make sense if we notice that the collaborative recommender is generally able to make much better recommendations using two addons than using one addon; or, the other way around, if we notice that it adds little value to evaluate based on a single addon.
 
 
 ```python
