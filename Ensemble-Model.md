@@ -663,7 +663,7 @@ There are many ways of choosing initial guesses. A constant vector of 1s seems t
 
 
 ```python
-def get_initial_guess(n):
+def get_initial_guess_alternative(n):
     return np.ones(n)
 ```
 
