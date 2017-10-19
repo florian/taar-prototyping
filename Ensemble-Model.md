@@ -57,8 +57,8 @@ ON l.client_id = non_system_addons.client_id
 rdd = frame.rdd
 ```
 
-    CPU times: user 20 ms, sys: 4 ms, total: 24 ms
-    Wall time: 2min 29s
+    CPU times: user 24 ms, sys: 4 ms, total: 28 ms
+    Wall time: 2min 50s
 
 
 
@@ -226,7 +226,7 @@ from operator import itemgetter
 
 ### Collaborative Recommender
 
-Use the scores computed internally
+For the collaborative recommender, we use the confidence scores that were already used internally before. These are based on singular value decomposition: A generator job finds good feature representations for addons and computes the feature values for each addon. By looking at the addons that a user already has installed, we can then find feature values that indicate what kind of addons the user likes. After that, we can compute the confidence scores for addons by calculating the distance between their feature values and the feature values of the user.
 
 
 ```python
@@ -301,9 +301,9 @@ class NewCollaborativeRecommender(CollaborativeRecommender):
 
 ### Similarity Recommender
 
-Use similarity scores computed internally
+Again, we already have some kind of confidence scores internally that we can reuse for the ensemble. These scores are based on a similarity measure: We find similar users to the current users (e.g. by comparing their locale, OS, number of bookmarks, etc.) and recommend their addons. The confidence score for an addon is then computed by summing up the similarity scores of all users that have the respective addon installed.
 
-TODO: Compute logarithm
+**TODO**: Compute logarithm
 
 
 ```python
@@ -377,7 +377,7 @@ class NewSimilarityRecommender(SimilarityRecommender):
 
 ### Locale Recommender
 
-Depends on number of installs in that locale
+The confidence scores for the locale recommender are based on the number of addon installations in the respective locale. The more often an addon was installed in the locale, the higher its confidence score. We normalize the results for each locale separately, i.e. the most popular addon in each locale will have a confidence score of 1.
 
 
 ```python
@@ -407,7 +407,7 @@ class NewLocaleRecommender(LocaleRecommender):
 
 ### Legacy Recommender
 
-1 for all replacement addons, 0 otherwise
+For the legacy recommender, we count how often an addon is listed as a replacement for an installed legacy addon. This count is a natural number that's directly used as the confidence score.
 
 
 ```python
@@ -432,6 +432,8 @@ class NewLegacyRecommender(LegacyRecommender):
 
 For training and validation purposes, only clients that have WebExtension addons installed are useful.
 
+The [evaluation notebook](https://github.com/florian/taar-prototyping/blob/master/evaluation.ipynb) lists the portion of clients with a certain number of whitelisted addons. If the cut-off is set to `>= 3` or `>= 4` very few clients are left.
+
 
 ```python
 useful_clients = completed_rdd.filter(lambda client: len(client['installed_addons']) >= 1).cache()
@@ -453,7 +455,7 @@ These users are useful for training and evaluating our model:
 
 
 ```python
-training, validation, test = useful_clients.randomSplit([0.8, 0.1, 0.1])
+training, test = useful_clients.randomSplit([0.8, 0.2])
 ```
 
 ## Masking addons
@@ -559,10 +561,6 @@ def compute_features(client_data):
 X_unnormalized = training_masked.map(compute_features).cache()
 ```
 
-    CPU times: user 1.3 s, sys: 20 ms, total: 1.32 s
-    Wall time: 1.34 s
-
-
 ## Normalization
 
 The optimization algorithms that we use here are much more minimal than what you typically from highly optimized ML libs. Because of this, we need to take special care of properly preprocessing the data.
@@ -645,10 +643,18 @@ We find recommendations, compute the average precision (AP) and then calculate t
 
 
 ```python
-def cost(weights):
-    return 1 - X.map(lambda (client_data, features): get_weighted_recommendations(client_data, features, weights))\
-            .map(lambda (client_data, recommendations): average_precision(client_data, recommendations))\
-            .mean()
+def cost(weights, X=X):
+    weighted_recommendations = X.map(lambda (client_data, features):
+                get_weighted_recommendations(client_data, features, weights)
+               )
+    
+    AP = weighted_recommendations.map(lambda (client_data, recommendations):
+             average_precision(client_data, recommendations)
+            )
+        
+    MAP = AP.mean()
+            
+    return 1 - MAP
 ```
 
 ### Choosing an initial guess
@@ -700,176 +706,114 @@ recommenders.keys()
 num_features = len(recommenders)
 x0 = get_initial_guess(num_features)
 print "Initial guess:", x0
-minimize(verbose_cost, x0, method="COBYLA", bounds=[(0, None)] * num_features, tol=1e-10)
+best_weights = minimize(verbose_cost, x0, method="COBYLA", tol=1e-5)
 ```
 
-    Initial guess: [ 0.38848417  0.88084589  0.75092367  0.55297014]
+    Initial guess: [ 0.48533936  0.55636737  0.13108097  0.47268632]
+    New guess: [ 0.48533936  0.55636737  0.13108097  0.47268632] leads to a cost of 0.705378749967
+    New guess: [ 1.48533936  0.55636737  0.13108097  0.47268632] leads to a cost of 0.651060536695
+    New guess: [ 1.48533936  1.55636737  0.13108097  0.47268632] leads to a cost of 0.650813378865
+    New guess: [ 1.48533936  1.55636737  1.13108097  0.47268632] leads to a cost of 0.649310991464
+    New guess: [ 1.48533936  1.55636737  1.13108097  1.47268632] leads to a cost of 0.705340053019
+    New guess: [ 2.1812669   1.55953397  1.15032963 -0.24516069] leads to a cost of 0.649269068547
+    New guess: [ 1.82239216  1.56106918  1.15966164 -0.59318293] leads to a cost of 0.68011649334
+    New guess: [ 2.1812669   1.80953154  1.15032963 -0.24405789] leads to a cost of 0.649252783755
+    New guess: [ 2.54022724  1.80852452  1.16249432  0.10379047] leads to a cost of 0.644256645414
+    New guess: [ 2.89564561  1.81024236  1.23708028  0.44746439] leads to a cost of 0.647646561847
+    New guess: [ 2.53251318  1.80852796  1.41237407  0.10301236] leads to a cost of 0.64414121662
+    New guess: [ 2.89159066  1.81025698  1.44762664  0.44915919] leads to a cost of 0.647528399838
+    New guess: [ 2.70572828  1.81110052  1.41716028 -0.07717366] leads to a cost of 0.649620313481
+    New guess: [ 2.28389193  2.22015535  1.41074175  0.2399346 ] leads to a cost of 0.646261875537
+    New guess: [ 2.3711054   1.63964133  1.41141717  0.19202877] leads to a cost of 0.644120853605
+    New guess: [ 2.43505878  1.63485173  1.4144207   0.29928083] leads to a cost of 0.647186124565
+    New guess: [ 2.33574054  1.685659    1.41039694  0.2152001 ] leads to a cost of 0.644750594415
+    New guess: [ 2.33845164  1.60879409  1.41222374  0.07538174] leads to a cost of 0.6440917324
+    New guess: [ 2.33772888  1.60938307  1.47471495  0.07586042] leads to a cost of 0.644009589544
+    New guess: [ 2.42535171  1.52196521  1.49168655  0.07169822] leads to a cost of 0.644082512942
+    New guess: [ 2.29709238  1.56753478  1.47446749  0.0983011 ] leads to a cost of 0.64400555768
+    New guess: [ 2.24370841  1.603316    1.58074647  0.08417185] leads to a cost of 0.643783705506
+    New guess: [ 2.1748745   1.65692838  1.66953226  0.07278378] leads to a cost of 0.643679245126
+    New guess: [ 2.12358501  1.58085683  1.75219668  0.09212549] leads to a cost of 0.643510185439
+    New guess: [ 2.07508988  1.54715919  1.86234429  0.09440456] leads to a cost of 0.643346269316
+    New guess: [ 1.97422953  1.50420451  1.92233998  0.09164693] leads to a cost of 0.643221598451
+    New guess: [ 1.92453869  1.54478908  2.0288606   0.07891627] leads to a cost of 0.643100799414
+    New guess: [  1.91327092e+00   1.49329991e+00   2.11136456e+00   1.19884174e-03] leads to a cost of 0.642887265516
+    New guess: [ 1.89970632  1.44082328  2.19936718 -0.06910581] leads to a cost of 0.648365353754
+    New guess: [ 1.9394283   1.46718024  2.13858713  0.04361035] leads to a cost of 0.642944585739
+    New guess: [ 1.87403908  1.4741998   2.16067306 -0.10505426] leads to a cost of 0.648523392245
+    New guess: [ 1.8630001   1.46215876  2.10191668  0.01908909] leads to a cost of 0.642836652223
+    New guess: [ 1.79043854  1.42201217  2.14060563 -0.0660651 ] leads to a cost of 0.648279810268
+    New guess: [ 1.84250083  1.50948094  2.11467384  0.05201167] leads to a cost of 0.642835425061
+    New guess: [ 1.85109713  1.51133039  2.08771818  0.06515085] leads to a cost of 0.642949187669
+    New guess: [ 1.80931759  1.50574013  2.15730912  0.02081292] leads to a cost of 0.642694870633
+    New guess: [ 1.76667561  1.502212    2.1889827  -0.01193228] leads to a cost of 0.647967626059
+    New guess: [ 1.79880642  1.51868732  2.1374796   0.00334186] leads to a cost of 0.642653097722
+    New guess: [ 1.75406654  1.52468942  2.15130157 -0.0376157 ] leads to a cost of 0.648104492346
+    New guess: [ 1.79964796  1.5344976   2.12561853  0.02753286] leads to a cost of 0.642590926776
+    New guess: [ 1.80705948  1.54562394  2.13258086  0.02341699] leads to a cost of 0.642582412926
+    New guess: [ 1.8324307   1.5378759   2.11636947  0.02025117] leads to a cost of 0.642677453204
+    New guess: [ 1.78610746  1.56740136  2.13436564  0.03117161] leads to a cost of 0.642475887687
+    New guess: [ 1.7683422   1.58515616  2.14444783  0.0467945 ] leads to a cost of 0.642573293813
+    New guess: [ 1.78251233  1.58042962  2.11065488  0.01594986] leads to a cost of 0.642605513884
+    New guess: [ 1.78054623  1.57035675  2.14462481  0.04113296] leads to a cost of 0.642521020339
+    New guess: [ 1.78979051  1.56933176  2.13055628  0.03657832] leads to a cost of 0.64257366894
+    New guess: [ 1.77703572  1.56832422  2.13649636  0.01866351] leads to a cost of 0.642569818419
+    New guess: [ 1.7906249   1.57231243  2.13768078  0.02882232] leads to a cost of 0.642538645867
+    New guess: [ 1.78376045  1.56875883  2.12087857  0.03858027] leads to a cost of 0.642550225269
+    New guess: [ 1.78849908  1.56008802  2.13555681  0.03181311] leads to a cost of 0.642469661922
+    New guess: [ 1.78565927  1.55881203  2.13576351  0.02946291] leads to a cost of 0.64247162563
+    New guess: [ 1.78922731  1.55999212  2.13402434  0.03085045] leads to a cost of 0.642479782485
+    New guess: [ 1.78643644  1.55929605  2.13500109  0.03498616] leads to a cost of 0.642503024201
+    New guess: [ 1.78981947  1.5607      2.1389024   0.03041745] leads to a cost of 0.642470606799
+    New guess: [ 1.78960884  1.5600329   2.13455655  0.0305563 ] leads to a cost of 0.642479242455
+    New guess: [ 1.78884385  1.55924235  2.13589509  0.0318854 ] leads to a cost of 0.6424696855
+    New guess: [ 1.78872172  1.56083818  2.13729181  0.03137475] leads to a cost of 0.642469648976
+    New guess: [ 1.78822472  1.56081853  2.1375662   0.0321691 ] leads to a cost of 0.642469917759
+    New guess: [ 1.78910145  1.56099475  2.13724084  0.03163382] leads to a cost of 0.642470818033
+    New guess: [ 1.78802074  1.56053936  2.13736066  0.0307679 ] leads to a cost of 0.642470238001
+    New guess: [ 1.78855447  1.56126247  2.13712095  0.03133963] leads to a cost of 0.64246964511
+    New guess: [ 1.78944912  1.56156296  2.13692692  0.03149883] leads to a cost of 0.642468703147
+    New guess: [ 1.79031974  1.5618698   2.13675835  0.03176924] leads to a cost of 0.642471907823
+    New guess: [ 1.78939493  1.5613792   2.13649193  0.03161064] leads to a cost of 0.64246956174
+    New guess: [ 1.78888366  1.56227688  2.13682278  0.03116207] leads to a cost of 0.642470407271
+    New guess: [ 1.78949446  1.56130329  2.13703048  0.03110107] leads to a cost of 0.642468636616
+    New guess: [ 1.78930409  1.56119788  2.1371166   0.03117061] leads to a cost of 0.642468161724
+    New guess: [ 1.78930827  1.56101723  2.13752343  0.03137126] leads to a cost of 0.642468951299
+    New guess: [ 1.78892824  1.56143402  2.13716901  0.03097404] leads to a cost of 0.642471136252
+    New guess: [ 1.78930413  1.5610224   2.13696234  0.03124144] leads to a cost of 0.642467927256
+    New guess: [ 1.78931129  1.56096071  2.13698544  0.03113891] leads to a cost of 0.642468350679
+    New guess: [ 1.78913381  1.56110079  2.13685241  0.03135263] leads to a cost of 0.642467895216
+    New guess: [ 1.78908565  1.56104591  2.13693722  0.0314014 ] leads to a cost of 0.642468252896
+    New guess: [ 1.78930455  1.56117993  2.13675174  0.03147118] leads to a cost of 0.642468703147
+    New guess: [ 1.78914061  1.56119741  2.13692572  0.03134059] leads to a cost of 0.64246789135
+    New guess: [ 1.78899322  1.5612648   2.13682717  0.03118688] leads to a cost of 0.642467977338
+    New guess: [ 1.78920341  1.56115866  2.1369562   0.03124825] leads to a cost of 0.642467901602
+    New guess: [ 1.78922145  1.56125043  2.13685221  0.03135291] leads to a cost of 0.642468309046
+    New guess: [ 1.78909777  1.5612084   2.13690914  0.03130194] leads to a cost of 0.64246783806
+    New guess: [ 1.78908268  1.56119342  2.1369308   0.03130511] leads to a cost of 0.642467830073
+    New guess: [ 1.78903065  1.56119853  2.13692727  0.03127382] leads to a cost of 0.642469730839
+    New guess: [ 1.78906923  1.56120367  2.13692489  0.03132982] leads to a cost of 0.642467398037
+    New guess: [ 1.78909932  1.56122045  2.13695178  0.03137242] leads to a cost of 0.642468252798
+    New guess: [ 1.78907354  1.5611577   2.13689284  0.03135361] leads to a cost of 0.642467887229
+    New guess: [ 1.78904312  1.56121681  2.13691663  0.03132686] leads to a cost of 0.642467398037
+    New guess: [ 1.78907067  1.56121267  2.13693081  0.03134053] leads to a cost of 0.642467364919
+    New guess: [ 1.78906693  1.56120876  2.13693613  0.03134138] leads to a cost of 0.642467364919
+    New guess: [ 1.78906875  1.56120668  2.13692319  0.03135216] leads to a cost of 0.642467887229
+    New guess: [ 1.7890772   1.56120938  2.13693288  0.03134127] leads to a cost of 0.642467364919
+    New guess: [ 1.78907283  1.56122012  2.1369394   0.03133059] leads to a cost of 0.642467398037
+    New guess: [ 1.78907033  1.56121341  2.13692953  0.03135041] leads to a cost of 0.642467887229
 
 
-    /mnt/anaconda2/lib/python2.7/site-packages/scipy/optimize/_minimize.py:400: RuntimeWarning: Method COBYLA cannot handle bounds.
-      RuntimeWarning)
 
-
-    New guess: [ 0.38848417  0.88084589  0.75092367  0.55297014] leads to a cost of 0.707622781302
-    New guess: [ 1.38848417  0.88084589  0.75092367  0.55297014] leads to a cost of 0.656494973351
-    New guess: [ 1.38848417  1.88084589  0.75092367  0.55297014] leads to a cost of 0.656422468122
-    New guess: [ 1.38848417  1.88084589  1.75092367  0.55297014] leads to a cost of 0.654930943044
-    New guess: [ 1.38848417  1.88084589  1.75092367  1.55297014] leads to a cost of 0.705653233305
-    New guess: [ 2.09824812  1.88185242  1.77162925 -0.15116436] leads to a cost of 0.650331978164
-    New guess: [ 1.77118452  1.88239279  1.78274545 -0.52919285] leads to a cost of 0.676865782411
-    New guess: [ 2.09824812  2.13185216  1.77162925 -0.150807  ] leads to a cost of 0.650317222086
-    New guess: [ 2.47914626  2.13193849  1.78550007  0.17280419] leads to a cost of 0.645031745
-    New guess: [ 2.94162872  2.13430499  1.85173384  0.35089817] leads to a cost of 0.64766524252
-    New guess: [ 2.47088222  2.13193989  2.03536151  0.17182145] leads to a cost of 0.644838888911
-    New guess: [ 2.93514485  2.13431271  2.08578754  0.35046019] leads to a cost of 0.647555900808
-    New guess: [ 2.2391335   2.13192224  2.03749002  0.61486546] leads to a cost of 0.648236958856
-    New guess: [ 2.45361213  2.37412669  2.03962347  0.11241492] leads to a cost of 0.64485202398
-    New guess: [ 2.40695018  2.06861335  2.05236846 -0.06080101] leads to a cost of 0.650097018706
-    New guess: [ 2.40623863  2.15281843  2.03680255  0.27674149] leads to a cost of 0.647205125991
-    New guess: [ 2.59372858  2.14491346  2.04137402  0.18996835] leads to a cost of 0.645074520339
-    New guess: [ 2.47562601  2.11723493  2.03755087  0.11130106] leads to a cost of 0.644850497035
-    New guess: [ 2.46923605  2.13154248  2.06654635  0.1729171 ] leads to a cost of 0.644832189335
-    New guess: [ 2.40714605  2.12598887  2.07005314  0.17573524] leads to a cost of 0.64482586746
-    New guess: [ 2.41015955  2.0958185   2.06956249  0.18328436] leads to a cost of 0.644830128659
-    New guess: [ 2.38800431  2.1583545   2.11032381  0.20524088] leads to a cost of 0.644802670959
-    New guess: [ 2.37211408  2.18940864  2.14394918  0.24472158] leads to a cost of 0.646658348049
-    New guess: [ 2.36972605  2.17175585  2.11175431  0.14701277] leads to a cost of 0.644747091203
-    New guess: [ 2.35667064  2.18512938  2.11912016  0.12307511] leads to a cost of 0.644759171807
-    New guess: [ 2.36559072  2.17785816  2.09805386  0.14846163] leads to a cost of 0.644752380191
-    New guess: [ 2.3651368   2.18635858  2.12730558  0.16938283] leads to a cost of 0.644767646575
-    New guess: [ 2.35678667  2.16337623  2.11219305  0.14952328] leads to a cost of 0.644739497067
-    New guess: [ 2.35849599  2.13264723  2.10888069  0.14523409] leads to a cost of 0.644745663067
-    New guess: [ 2.34904771  2.16557804  2.11683346  0.13695873] leads to a cost of 0.644755850599
-    New guess: [ 2.35505048  2.16249916  2.11736807  0.16413752] leads to a cost of 0.644762459314
-    New guess: [ 2.35947533  2.15697678  2.10902591  0.14784325] leads to a cost of 0.644747134976
-    New guess: [ 2.35421196  2.16644045  2.10553503  0.15035233] leads to a cost of 0.644743468454
-    New guess: [ 2.35629285  2.16358134  2.11400735  0.15294105] leads to a cost of 0.644745882658
-    New guess: [ 2.3550488   2.16260289  2.11246568  0.14917386] leads to a cost of 0.644737559785
-    New guess: [ 2.35396551  2.16384721  2.11379679  0.14589284] leads to a cost of 0.644741053821
-    New guess: [ 2.35416505  2.16328499  2.11087374  0.14935869] leads to a cost of 0.644738593765
-    New guess: [ 2.35534529  2.16200211  2.11198312  0.14865235] leads to a cost of 0.644741003315
-    New guess: [ 2.35423792  2.16296124  2.11354626  0.15053809] leads to a cost of 0.644737942187
-    New guess: [ 2.35484684  2.16323991  2.1128379   0.14856679] leads to a cost of 0.644741385146
-    New guess: [ 2.35494313  2.16249202  2.11257683  0.14962398] leads to a cost of 0.644737282883
-    New guess: [ 2.35474013  2.16241058  2.11264482  0.14953948] leads to a cost of 0.644739098796
-    New guess: [ 2.35526431  2.16280936  2.11259375  0.14980911] leads to a cost of 0.644737279802
-    New guess: [ 2.35538456  2.16270274  2.11277262  0.14976691] leads to a cost of 0.644737776965
-    New guess: [ 2.35547517  2.16256051  2.11224258  0.14990243] leads to a cost of 0.644738193279
-    New guess: [ 2.35490227  2.1631241   2.11259745  0.14990005] leads to a cost of 0.644737963467
+```python
+cost([1.278125, 1., 1.8171874999999997, 0.10707070707070707])
+```
 
 
 
-    
 
-    KeyboardInterruptTraceback (most recent call last)
+    0.64280133639614734
 
-    <ipython-input-145-2aaca29e9936> in <module>()
-          2 x0 = get_initial_guess(num_features)
-          3 print "Initial guess:", x0
-    ----> 4 minimize(verbose_cost, x0, method="COBYLA", bounds=[(0, None)] * num_features, tol=1e-10)
-    
-
-    /mnt/anaconda2/lib/python2.7/site-packages/scipy/optimize/_minimize.pyc in minimize(fun, x0, args, method, jac, hess, hessp, bounds, constraints, tol, callback, options)
-        453                              **options)
-        454     elif meth == 'cobyla':
-    --> 455         return _minimize_cobyla(fun, x0, args, constraints, **options)
-        456     elif meth == 'slsqp':
-        457         return _minimize_slsqp(fun, x0, args, jac, bounds,
-
-
-    /mnt/anaconda2/lib/python2.7/site-packages/scipy/optimize/cobyla.pyc in _minimize_cobyla(fun, x0, args, constraints, rhobeg, tol, iprint, maxiter, disp, catol, **unknown_options)
-        256     xopt, info = _cobyla.minimize(calcfc, m=m, x=np.copy(x0), rhobeg=rhobeg,
-        257                                   rhoend=rhoend, iprint=iprint, maxfun=maxfun,
-    --> 258                                   dinfo=info)
-        259 
-        260     if info[3] > catol:
-
-
-    /mnt/anaconda2/lib/python2.7/site-packages/scipy/optimize/cobyla.pyc in calcfc(x, con)
-        246 
-        247     def calcfc(x, con):
-    --> 248         f = fun(x, *args)
-        249         i = 0
-        250         for size, c in izip(cons_lengths, constraints):
-
-
-    <ipython-input-143-063bda5c54e1> in verbose_cost(weights)
-          1 def verbose_cost(weights):
-    ----> 2     new_cost = cost(weights)
-          3     print "New guess:", weights, "leads to a cost of", new_cost
-          4     return new_cost
-
-
-    <ipython-input-137-24f764a1f265> in cost(weights)
-          1 def cost(weights):
-    ----> 2     return 1 - X.map(lambda (client_data, features): get_weighted_recommendations(client_data, features, weights))            .map(lambda (client_data, recommendations): average_precision(client_data, recommendations))            .mean()
-    
-
-    /usr/lib/spark/python/pyspark/rdd.py in mean(self)
-       1153         2.0
-       1154         """
-    -> 1155         return self.stats().mean()
-       1156 
-       1157     def variance(self):
-
-
-    /usr/lib/spark/python/pyspark/rdd.py in stats(self)
-       1016             return left_counter.mergeStats(right_counter)
-       1017 
-    -> 1018         return self.mapPartitions(lambda i: [StatCounter(i)]).reduce(redFunc)
-       1019 
-       1020     def histogram(self, buckets):
-
-
-    /usr/lib/spark/python/pyspark/rdd.py in reduce(self, f)
-        800             yield reduce(f, iterator, initial)
-        801 
-    --> 802         vals = self.mapPartitions(func).collect()
-        803         if vals:
-        804             return reduce(f, vals)
-
-
-    /usr/lib/spark/python/pyspark/rdd.py in collect(self)
-        774         """
-        775         with SCCallSiteSync(self.context) as css:
-    --> 776             port = self.ctx._jvm.PythonRDD.collectAndServe(self._jrdd.rdd())
-        777         return list(_load_from_socket(port, self._jrdd_deserializer))
-        778 
-
-
-    /usr/lib/spark/python/lib/py4j-0.10.3-src.zip/py4j/java_gateway.py in __call__(self, *args)
-       1129             proto.END_COMMAND_PART
-       1130 
-    -> 1131         answer = self.gateway_client.send_command(command)
-       1132         return_value = get_return_value(
-       1133             answer, self.gateway_client, self.target_id, self.name)
-
-
-    /usr/lib/spark/python/lib/py4j-0.10.3-src.zip/py4j/java_gateway.py in send_command(self, command, retry, binary)
-        881         connection = self._get_connection()
-        882         try:
-    --> 883             response = connection.send_command(command)
-        884             if binary:
-        885                 return response, self._create_connection_guard(connection)
-
-
-    /usr/lib/spark/python/lib/py4j-0.10.3-src.zip/py4j/java_gateway.py in send_command(self, command)
-       1026 
-       1027         try:
-    -> 1028             answer = smart_decode(self.stream.readline()[:-1])
-       1029             logger.debug("Answer received: {0}".format(answer))
-       1030             if answer.startswith(proto.RETURN_MESSAGE):
-
-
-    /mnt/anaconda2/lib/python2.7/socket.pyc in readline(self, size)
-        449             while True:
-        450                 try:
-    --> 451                     data = self._sock.recv(self._rbufsize)
-        452                 except error, e:
-        453                     if e.args[0] == EINTR:
-
-
-    KeyboardInterrupt: 
 
 
 ### Experimental: Grid search
@@ -1015,8 +959,8 @@ def list_elements_to_indices(superlist, sublist):
 
 
 ```python
-def evaluate_recommendation_manager(mngr):
-    return 1 - training_masked\
+def evaluate_recommendation_manager(mngr, data=training_masked):
+    return 1 - data\
         .map(lambda user: (user, mngr.recommend(user, 10)))\
         .map(lambda (user, recommendations): average_precision(user, list_elements_to_indices(whitelist, recommendations)))\
         .mean()
@@ -1061,6 +1005,49 @@ evaluate_recommendation_manager(mngr)
 
 
 
-    0.66444559195452979
+    0.66240704406886164
+
+
+
+## Test set
+
+The results using the test set are quite similar:
+
+
+```python
+test_masked = test.map(mask_addons).cache()
+```
+
+
+```python
+X_test_unnormalized = test_masked.map(compute_features).cache()
+```
+
+
+```python
+X_test = X_test_unnormalized.map(scale_features).cache()
+```
+
+
+```python
+evaluate_recommendation_manager(mngr, test_masked)
+```
+
+
+
+
+    0.66328519154987853
+
+
+
+
+```python
+cost(best_weights, X_test)
+```
+
+
+
+
+    0.64363248228167091
 
 
