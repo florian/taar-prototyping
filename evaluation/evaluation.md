@@ -47,11 +47,11 @@ FROM valid_clients l LEFT OUTER JOIN non_system_addons
 ON l.client_id = non_system_addons.client_id
 """)
 
-rdd = frame.rdd
+rdd = frame.rdd.cache()
 ```
 
-    CPU times: user 196 ms, sys: 68 ms, total: 264 ms
-    Wall time: 19min 5s
+    CPU times: user 12 ms, sys: 0 ns, total: 12 ms
+    Wall time: 1min 14s
 
 
 ## Loading addon data (AMO)
@@ -150,8 +150,10 @@ def compute_weeks_ago(formatted_date):
 def complete_client_data(client_data):
     client = client_data.asDict()
     
-    client['installed_addons'] = client['installed_addons'] or []
-    client['disabled_addon_ids'] = get_whitelisted_addons(client['installed_addons'])
+    addons = client['installed_addons'] or []
+    client['installed_addons'] = get_whitelisted_addons(addons)
+    client['disabled_addons_ids'] = addons
+    
     client['locale'] = str(client['locale'])
     client['profile_age_in_weeks'] = compute_weeks_ago(client['profile_date'])
     client['submission_age_in_weeks'] = compute_weeks_ago(client['submission_date'])
@@ -162,6 +164,11 @@ def complete_client_data(client_data):
 ## Evaluating the existing recommenders
 
 To check if a recommender is able to make a recommendation, it's sometimes easier and cleaner to directly query it instead of checking the important attributes ourselves. For example, this is the case for the locale recommender.
+
+
+```python
+sc.addPyFile("./taar/dist/mozilla_taar-0.0.16.dev15+g824aa58.d20171018-py2.7.egg")
+```
 
 
 ```python
@@ -184,14 +191,16 @@ class DummySimilarityRecommender:
 recommenders = {
     "collaborative": CollaborativeRecommender(),
     "legacy": LegacyRecommender(),
-    "locale": LocaleRecommender(),
+    "locale": LocaleRecommender("./top_addons_by_locale.json"),
     "similarity": DummySimilarityRecommender()
 }
 ```
 
     INFO:requests.packages.urllib3.connectionpool:Starting new HTTPS connection (1): s3-us-west-2.amazonaws.com
     INFO:requests.packages.urllib3.connectionpool:Starting new HTTPS connection (1): s3-us-west-2.amazonaws.com
+    INFO:boto3.resources.action:Calling s3:get_object with {u'Bucket': 'telemetry-parquet', u'Key': 'taar/legacy/legacy_dict.json'}
     INFO:botocore.vendored.requests.packages.urllib3.connectionpool:Starting new HTTPS connection (1): s3-us-west-2.amazonaws.com
+    INFO:boto3.resources.action:Calling s3:get_object with {u'Bucket': 'telemetry-parquet', u'Key': 'taar/locale/top10_dict.json'}
     INFO:botocore.vendored.requests.packages.urllib3.connectionpool:Starting new HTTPS connection (1): s3-us-west-2.amazonaws.com
 
 
@@ -233,8 +242,8 @@ def analyse(rdd):
 %time results = analyse(rdd_completed)
 ```
 
-    CPU times: user 1.35 s, sys: 148 ms, total: 1.5 s
-    Wall time: 11min 48s
+    CPU times: user 1.3 s, sys: 116 ms, total: 1.41 s
+    Wall time: 51.1 s
 
 
 
@@ -319,19 +328,19 @@ sorted_dataframe(df, individual_counts)
   <tbody>
     <tr>
       <th>locale</th>
-      <td>0.99977</td>
-    </tr>
-    <tr>
-      <th>collaborative</th>
-      <td>0.41949</td>
+      <td>0.95706</td>
     </tr>
     <tr>
       <th>similarity</th>
-      <td>0.28339</td>
+      <td>0.28744</td>
+    </tr>
+    <tr>
+      <th>collaborative</th>
+      <td>0.08311</td>
     </tr>
     <tr>
       <th>legacy</th>
-      <td>0.00000</td>
+      <td>0.02739</td>
     </tr>
   </tbody>
 </table>
@@ -397,68 +406,132 @@ sorted_dataframe(df, results.values())
   </thead>
   <tbody>
     <tr>
-      <th>1</th>
-      <td>Available</td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>0.44747</td>
-    </tr>
-    <tr>
       <th>2</th>
       <td>Available</td>
       <td></td>
-      <td>Available</td>
       <td></td>
-      <td>0.26897</td>
+      <td></td>
+      <td>0.62725</td>
     </tr>
     <tr>
-      <th>0</th>
+      <th>9</th>
       <td>Available</td>
       <td></td>
+      <td></td>
       <td>Available</td>
-      <td>Available</td>
-      <td>0.15043</td>
+      <td>0.23407</td>
     </tr>
     <tr>
-      <th>4</th>
+      <th>12</th>
       <td>Available</td>
       <td></td>
-      <td></td>
       <td>Available</td>
-      <td>0.13290</td>
+      <td></td>
+      <td>0.03869</td>
     </tr>
     <tr>
-      <th>6</th>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>0.00011</td>
-    </tr>
-    <tr>
-      <th>5</th>
-      <td></td>
-      <td></td>
+      <th>1</th>
       <td>Available</td>
-      <td></td>
-      <td>0.00006</td>
-    </tr>
-    <tr>
-      <th>7</th>
-      <td></td>
       <td></td>
       <td>Available</td>
       <td>Available</td>
-      <td>0.00003</td>
+      <td>0.03081</td>
     </tr>
     <tr>
       <th>3</th>
       <td></td>
       <td></td>
       <td></td>
+      <td></td>
+      <td>0.03016</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td></td>
+      <td></td>
+      <td></td>
       <td>Available</td>
-      <td>0.00003</td>
+      <td>0.00972</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td>0.00894</td>
+    </tr>
+    <tr>
+      <th>0</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00603</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00575</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00553</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00109</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00082</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td>0.00045</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00027</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00023</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00019</td>
     </tr>
   </tbody>
 </table>
@@ -529,7 +602,7 @@ for num, group in groupby(sorted(results.keys(), key=sum), sum):
       <td></td>
       <td></td>
       <td></td>
-      <td>0.00011</td>
+      <td>0.03016</td>
       <td>1.00000</td>
     </tr>
   </tbody>
@@ -562,8 +635,17 @@ for num, group in groupby(sorted(results.keys(), key=sum), sum):
       <td></td>
       <td></td>
       <td></td>
-      <td>0.44747</td>
-      <td>0.99980</td>
+      <td>0.62725</td>
+      <td>0.98237</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00972</td>
+      <td>0.01522</td>
     </tr>
     <tr>
       <th>2</th>
@@ -571,17 +653,17 @@ for num, group in groupby(sorted(results.keys(), key=sum), sum):
       <td></td>
       <td>Available</td>
       <td></td>
-      <td>0.00006</td>
-      <td>0.00014</td>
+      <td>0.00109</td>
+      <td>0.00171</td>
     </tr>
     <tr>
       <th>1</th>
       <td></td>
-      <td></td>
-      <td></td>
       <td>Available</td>
-      <td>0.00003</td>
-      <td>0.00006</td>
+      <td></td>
+      <td></td>
+      <td>0.00045</td>
+      <td>0.00070</td>
     </tr>
   </tbody>
 </table>
@@ -608,31 +690,58 @@ for num, group in groupby(sorted(results.keys(), key=sum), sum):
   </thead>
   <tbody>
     <tr>
+      <th>2</th>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>0.23407</td>
+      <td>0.82705</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>0.03869</td>
+      <td>0.13671</td>
+    </tr>
+    <tr>
       <th>0</th>
       <td>Available</td>
-      <td></td>
       <td>Available</td>
       <td></td>
-      <td>0.26897</td>
-      <td>0.66924</td>
+      <td></td>
+      <td>0.00894</td>
+      <td>0.03157</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00082</td>
+      <td>0.00290</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>Available</td>
-      <td></td>
       <td></td>
       <td>Available</td>
-      <td>0.13290</td>
-      <td>0.33068</td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00027</td>
+      <td>0.00097</td>
     </tr>
     <tr>
-      <th>2</th>
-      <td></td>
+      <th>3</th>
       <td></td>
       <td>Available</td>
       <td>Available</td>
-      <td>0.00003</td>
-      <td>0.00007</td>
+      <td></td>
+      <td>0.00023</td>
+      <td>0.00081</td>
     </tr>
   </tbody>
 </table>
@@ -659,12 +768,72 @@ for num, group in groupby(sorted(results.keys(), key=sum), sum):
   </thead>
   <tbody>
     <tr>
-      <th>0</th>
+      <th>1</th>
       <td>Available</td>
       <td></td>
       <td>Available</td>
       <td>Available</td>
-      <td>0.15043</td>
+      <td>0.03081</td>
+      <td>0.72010</td>
+    </tr>
+    <tr>
+      <th>0</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00603</td>
+      <td>0.14099</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00575</td>
+      <td>0.13443</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00019</td>
+      <td>0.00448</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+
+#### 4 available recommenders
+
+
+
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>locale</th>
+      <th>legacy</th>
+      <th>collaborative</th>
+      <th>similarity</th>
+      <th>Relative to all</th>
+      <th>Relative to this table</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00553</td>
       <td>1.00000</td>
     </tr>
   </tbody>
@@ -718,8 +887,8 @@ def get_conditioned_results(attr, conditions):
 %time conditioned_results = get_conditioned_results("profile_age_in_weeks", conditions)
 ```
 
-    CPU times: user 4.71 s, sys: 428 ms, total: 5.14 s
-    Wall time: 46min 37s
+    CPU times: user 5.86 s, sys: 388 ms, total: 6.25 s
+    Wall time: 1min 3s
 
 
 To make things a little bit easier to read, only recommender combinations that actually appear are displayed in the table.
@@ -798,60 +967,92 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
   </thead>
   <tbody>
     <tr>
-      <th>1</th>
-      <td>Available</td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>0.52749</td>
-    </tr>
-    <tr>
       <th>2</th>
       <td>Available</td>
       <td></td>
-      <td>Available</td>
       <td></td>
-      <td>0.28995</td>
+      <td></td>
+      <td>0.77052</td>
     </tr>
     <tr>
-      <th>4</th>
+      <th>10</th>
       <td>Available</td>
       <td></td>
       <td></td>
       <td>Available</td>
-      <td>0.10739</td>
+      <td>0.15120</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.02525</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>0.02326</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.01290</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00524</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td>0.00337</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00307</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00181</td>
     </tr>
     <tr>
       <th>0</th>
       <td>Available</td>
+      <td>Available</td>
       <td></td>
       <td>Available</td>
-      <td>Available</td>
-      <td>0.07517</td>
+      <td>0.00133</td>
     </tr>
     <tr>
-      <th>3</th>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>Available</td>
-      <td>0.00000</td>
-    </tr>
-    <tr>
-      <th>5</th>
+      <th>12</th>
       <td></td>
       <td></td>
       <td>Available</td>
       <td></td>
-      <td>0.00000</td>
-    </tr>
-    <tr>
-      <th>6</th>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>0.00000</td>
+      <td>0.00114</td>
     </tr>
     <tr>
       <th>7</th>
@@ -859,7 +1060,39 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td></td>
       <td>Available</td>
       <td>Available</td>
-      <td>0.00000</td>
+      <td>0.00030</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00024</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td>0.00024</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00006</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00006</td>
     </tr>
   </tbody>
 </table>
@@ -885,52 +1118,92 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
   </thead>
   <tbody>
     <tr>
-      <th>1</th>
-      <td>Available</td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>0.55644</td>
-    </tr>
-    <tr>
       <th>2</th>
       <td>Available</td>
       <td></td>
-      <td>Available</td>
       <td></td>
-      <td>0.22328</td>
+      <td></td>
+      <td>0.73305</td>
     </tr>
     <tr>
-      <th>4</th>
+      <th>10</th>
       <td>Available</td>
       <td></td>
       <td></td>
       <td>Available</td>
-      <td>0.13656</td>
+      <td>0.18876</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.02495</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>0.01970</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.01497</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00715</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td>0.00292</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00254</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00241</td>
     </tr>
     <tr>
       <th>0</th>
       <td>Available</td>
+      <td>Available</td>
       <td></td>
       <td>Available</td>
-      <td>Available</td>
-      <td>0.08356</td>
+      <td>0.00173</td>
     </tr>
     <tr>
-      <th>6</th>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>0.00010</td>
-    </tr>
-    <tr>
-      <th>5</th>
+      <th>12</th>
       <td></td>
       <td></td>
       <td>Available</td>
       <td></td>
-      <td>0.00006</td>
+      <td>0.00105</td>
     </tr>
     <tr>
       <th>7</th>
@@ -938,15 +1211,39 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td></td>
       <td>Available</td>
       <td>Available</td>
-      <td>0.00001</td>
+      <td>0.00035</td>
     </tr>
     <tr>
-      <th>3</th>
-      <td></td>
-      <td></td>
+      <th>9</th>
       <td></td>
       <td>Available</td>
-      <td>0.00000</td>
+      <td></td>
+      <td></td>
+      <td>0.00015</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00011</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00008</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00007</td>
     </tr>
   </tbody>
 </table>
@@ -972,52 +1269,92 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
   </thead>
   <tbody>
     <tr>
-      <th>1</th>
-      <td>Available</td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>0.53226</td>
-    </tr>
-    <tr>
       <th>2</th>
       <td>Available</td>
       <td></td>
-      <td>Available</td>
       <td></td>
-      <td>0.22522</td>
+      <td></td>
+      <td>0.72011</td>
     </tr>
     <tr>
-      <th>4</th>
+      <th>10</th>
       <td>Available</td>
       <td></td>
       <td></td>
       <td>Available</td>
-      <td>0.14883</td>
+      <td>0.19623</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.02642</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>0.02061</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.01699</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00717</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td>0.00295</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00291</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00283</td>
     </tr>
     <tr>
       <th>0</th>
       <td>Available</td>
+      <td>Available</td>
       <td></td>
       <td>Available</td>
-      <td>Available</td>
-      <td>0.09353</td>
+      <td>0.00212</td>
     </tr>
     <tr>
-      <th>5</th>
+      <th>12</th>
       <td></td>
       <td></td>
       <td>Available</td>
       <td></td>
-      <td>0.00006</td>
-    </tr>
-    <tr>
-      <th>6</th>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>0.00006</td>
+      <td>0.00058</td>
     </tr>
     <tr>
       <th>7</th>
@@ -1025,15 +1362,39 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td></td>
       <td>Available</td>
       <td>Available</td>
-      <td>0.00003</td>
+      <td>0.00043</td>
     </tr>
     <tr>
-      <th>3</th>
-      <td></td>
-      <td></td>
+      <th>9</th>
       <td></td>
       <td>Available</td>
-      <td>0.00001</td>
+      <td></td>
+      <td></td>
+      <td>0.00024</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00016</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00014</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00011</td>
     </tr>
   </tbody>
 </table>
@@ -1059,52 +1420,92 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
   </thead>
   <tbody>
     <tr>
-      <th>1</th>
-      <td>Available</td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>0.52304</td>
-    </tr>
-    <tr>
       <th>2</th>
       <td>Available</td>
       <td></td>
-      <td>Available</td>
       <td></td>
-      <td>0.22984</td>
+      <td></td>
+      <td>0.70803</td>
     </tr>
     <tr>
-      <th>4</th>
+      <th>10</th>
       <td>Available</td>
       <td></td>
       <td></td>
       <td>Available</td>
-      <td>0.14583</td>
+      <td>0.21223</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.02468</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>0.02100</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.01497</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00685</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td>0.00310</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00272</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00260</td>
     </tr>
     <tr>
       <th>0</th>
       <td>Available</td>
+      <td>Available</td>
       <td></td>
       <td>Available</td>
-      <td>Available</td>
-      <td>0.10121</td>
+      <td>0.00212</td>
     </tr>
     <tr>
-      <th>6</th>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>0.00005</td>
-    </tr>
-    <tr>
-      <th>5</th>
+      <th>12</th>
       <td></td>
       <td></td>
       <td>Available</td>
       <td></td>
-      <td>0.00003</td>
+      <td>0.00061</td>
     </tr>
     <tr>
       <th>7</th>
@@ -1112,15 +1513,39 @@ counts, titles = display_individual_filtered_results(conditioned_results, combin
       <td></td>
       <td>Available</td>
       <td>Available</td>
-      <td>0.00002</td>
+      <td>0.00046</td>
     </tr>
     <tr>
-      <th>3</th>
-      <td></td>
-      <td></td>
+      <th>9</th>
       <td></td>
       <td>Available</td>
-      <td>0.00000</td>
+      <td></td>
+      <td></td>
+      <td>0.00027</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00024</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00006</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00006</td>
     </tr>
   </tbody>
 </table>
@@ -1175,88 +1600,136 @@ display_merged_filtered_results(counts, titles, total_results, combinations, lab
   </thead>
   <tbody>
     <tr>
-      <th>1</th>
-      <td>Available</td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>0.52749</td>
-      <td>0.55644</td>
-      <td>0.53226</td>
-      <td>0.52304</td>
-      <td>0.44747</td>
-    </tr>
-    <tr>
       <th>2</th>
       <td>Available</td>
       <td></td>
-      <td>Available</td>
       <td></td>
-      <td>0.28995</td>
-      <td>0.22328</td>
-      <td>0.22522</td>
-      <td>0.22984</td>
-      <td>0.26897</td>
+      <td></td>
+      <td>0.77052</td>
+      <td>0.73305</td>
+      <td>0.72011</td>
+      <td>0.70803</td>
+      <td>0.62725</td>
     </tr>
     <tr>
-      <th>4</th>
+      <th>10</th>
       <td>Available</td>
       <td></td>
       <td></td>
       <td>Available</td>
-      <td>0.10739</td>
-      <td>0.13656</td>
-      <td>0.14883</td>
-      <td>0.14583</td>
-      <td>0.13290</td>
+      <td>0.15120</td>
+      <td>0.18876</td>
+      <td>0.19623</td>
+      <td>0.21223</td>
+      <td>0.23407</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.02525</td>
+      <td>0.02495</td>
+      <td>0.02642</td>
+      <td>0.02468</td>
+      <td>0.03016</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>0.02326</td>
+      <td>0.01970</td>
+      <td>0.02061</td>
+      <td>0.02100</td>
+      <td>0.03869</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.01290</td>
+      <td>0.01497</td>
+      <td>0.01699</td>
+      <td>0.01497</td>
+      <td>0.03081</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00524</td>
+      <td>0.00715</td>
+      <td>0.00717</td>
+      <td>0.00685</td>
+      <td>0.00972</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td>0.00337</td>
+      <td>0.00292</td>
+      <td>0.00295</td>
+      <td>0.00310</td>
+      <td>0.00894</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00307</td>
+      <td>0.00241</td>
+      <td>0.00283</td>
+      <td>0.00272</td>
+      <td>0.00575</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00181</td>
+      <td>0.00254</td>
+      <td>0.00291</td>
+      <td>0.00260</td>
+      <td>0.00553</td>
     </tr>
     <tr>
       <th>0</th>
       <td>Available</td>
+      <td>Available</td>
       <td></td>
       <td>Available</td>
-      <td>Available</td>
-      <td>0.07517</td>
-      <td>0.08356</td>
-      <td>0.09353</td>
-      <td>0.10121</td>
-      <td>0.15043</td>
+      <td>0.00133</td>
+      <td>0.00173</td>
+      <td>0.00212</td>
+      <td>0.00212</td>
+      <td>0.00603</td>
     </tr>
     <tr>
-      <th>3</th>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>Available</td>
-      <td>0.00000</td>
-      <td>0.00000</td>
-      <td>0.00001</td>
-      <td>0.00000</td>
-      <td>0.00003</td>
-    </tr>
-    <tr>
-      <th>5</th>
+      <th>12</th>
       <td></td>
       <td></td>
       <td>Available</td>
       <td></td>
-      <td>0.00000</td>
-      <td>0.00006</td>
-      <td>0.00006</td>
-      <td>0.00003</td>
-      <td>0.00006</td>
-    </tr>
-    <tr>
-      <th>6</th>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>0.00000</td>
-      <td>0.00010</td>
-      <td>0.00006</td>
-      <td>0.00005</td>
-      <td>0.00011</td>
+      <td>0.00114</td>
+      <td>0.00105</td>
+      <td>0.00058</td>
+      <td>0.00061</td>
+      <td>0.00109</td>
     </tr>
     <tr>
       <th>7</th>
@@ -1264,11 +1737,59 @@ display_merged_filtered_results(counts, titles, total_results, combinations, lab
       <td></td>
       <td>Available</td>
       <td>Available</td>
-      <td>0.00000</td>
-      <td>0.00001</td>
-      <td>0.00003</td>
-      <td>0.00002</td>
-      <td>0.00003</td>
+      <td>0.00030</td>
+      <td>0.00035</td>
+      <td>0.00043</td>
+      <td>0.00046</td>
+      <td>0.00082</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00024</td>
+      <td>0.00011</td>
+      <td>0.00011</td>
+      <td>0.00006</td>
+      <td>0.00019</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td>0.00024</td>
+      <td>0.00015</td>
+      <td>0.00024</td>
+      <td>0.00027</td>
+      <td>0.00045</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00006</td>
+      <td>0.00007</td>
+      <td>0.00016</td>
+      <td>0.00006</td>
+      <td>0.00023</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00006</td>
+      <td>0.00008</td>
+      <td>0.00014</td>
+      <td>0.00024</td>
+      <td>0.00027</td>
     </tr>
   </tbody>
 </table>
@@ -1282,8 +1803,8 @@ display_merged_filtered_results(counts, titles, total_results, combinations, lab
 %time conditioned_results_submission_date = get_conditioned_results("submission_age_in_weeks", conditions)
 ```
 
-    CPU times: user 4.8 s, sys: 324 ms, total: 5.12 s
-    Wall time: 46min 36s
+    CPU times: user 5.11 s, sys: 220 ms, total: 5.33 s
+    Wall time: 1min 10s
 
 
 
@@ -1317,52 +1838,84 @@ display_merged_filtered_results(counts, titles, total_results, combinations, lab
   </thead>
   <tbody>
     <tr>
-      <th>0</th>
-      <td>Available</td>
-      <td></td>
-      <td>Available</td>
-      <td>Available</td>
-      <td>0.30124</td>
-    </tr>
-    <tr>
       <th>2</th>
       <td>Available</td>
       <td></td>
+      <td></td>
+      <td></td>
+      <td>0.42921</td>
+    </tr>
+    <tr>
+      <th>10</th>
       <td>Available</td>
       <td></td>
-      <td>0.25782</td>
+      <td></td>
+      <td>Available</td>
+      <td>0.37171</td>
     </tr>
     <tr>
       <th>1</th>
       <td>Available</td>
       <td></td>
-      <td></td>
-      <td></td>
-      <td>0.25026</td>
-    </tr>
-    <tr>
-      <th>4</th>
       <td>Available</td>
-      <td></td>
-      <td></td>
       <td>Available</td>
-      <td>0.19053</td>
-    </tr>
-    <tr>
-      <th>6</th>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>0.00005</td>
+      <td>0.06815</td>
     </tr>
     <tr>
       <th>3</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>0.05122</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.01944</td>
+    </tr>
+    <tr>
+      <th>15</th>
       <td></td>
       <td></td>
       <td></td>
       <td>Available</td>
-      <td>0.00005</td>
+      <td>0.01649</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.01133</td>
+    </tr>
+    <tr>
+      <th>0</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>0.01046</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td>0.00926</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00783</td>
     </tr>
     <tr>
       <th>7</th>
@@ -1370,15 +1923,47 @@ display_merged_filtered_results(counts, titles, total_results, combinations, lab
       <td></td>
       <td>Available</td>
       <td>Available</td>
-      <td>0.00003</td>
+      <td>0.00180</td>
     </tr>
     <tr>
-      <th>5</th>
+      <th>12</th>
       <td></td>
       <td></td>
       <td>Available</td>
       <td></td>
-      <td>0.00002</td>
+      <td>0.00154</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00048</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td>0.00043</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00038</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00026</td>
     </tr>
   </tbody>
 </table>
@@ -1404,52 +1989,92 @@ display_merged_filtered_results(counts, titles, total_results, combinations, lab
   </thead>
   <tbody>
     <tr>
-      <th>1</th>
-      <td>Available</td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>0.37644</td>
-    </tr>
-    <tr>
       <th>2</th>
       <td>Available</td>
       <td></td>
+      <td></td>
+      <td></td>
+      <td>0.58081</td>
+    </tr>
+    <tr>
+      <th>10</th>
       <td>Available</td>
       <td></td>
-      <td>0.24523</td>
+      <td></td>
+      <td>Available</td>
+      <td>0.27560</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>0.04266</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.03264</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.02649</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>0.01156</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td>0.00916</td>
     </tr>
     <tr>
       <th>0</th>
       <td>Available</td>
+      <td>Available</td>
       <td></td>
       <td>Available</td>
-      <td>Available</td>
-      <td>0.19097</td>
+      <td>0.00623</td>
     </tr>
     <tr>
-      <th>4</th>
+      <th>14</th>
+      <td>Available</td>
+      <td>Available</td>
       <td>Available</td>
       <td></td>
-      <td></td>
-      <td>Available</td>
-      <td>0.18718</td>
+      <td>0.00618</td>
     </tr>
     <tr>
-      <th>6</th>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>0.00008</td>
+      <th>8</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00537</td>
     </tr>
     <tr>
-      <th>5</th>
+      <th>12</th>
       <td></td>
       <td></td>
       <td>Available</td>
       <td></td>
-      <td>0.00004</td>
+      <td>0.00123</td>
     </tr>
     <tr>
       <th>7</th>
@@ -1457,15 +2082,39 @@ display_merged_filtered_results(counts, titles, total_results, combinations, lab
       <td></td>
       <td>Available</td>
       <td>Available</td>
-      <td>0.00003</td>
+      <td>0.00085</td>
     </tr>
     <tr>
-      <th>3</th>
-      <td></td>
-      <td></td>
+      <th>9</th>
       <td></td>
       <td>Available</td>
-      <td>0.00002</td>
+      <td></td>
+      <td></td>
+      <td>0.00042</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00031</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00028</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00021</td>
     </tr>
   </tbody>
 </table>
@@ -1491,60 +2140,92 @@ display_merged_filtered_results(counts, titles, total_results, combinations, lab
   </thead>
   <tbody>
     <tr>
-      <th>1</th>
-      <td>Available</td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>0.46093</td>
-    </tr>
-    <tr>
       <th>2</th>
       <td>Available</td>
       <td></td>
+      <td></td>
+      <td></td>
+      <td>0.65590</td>
+    </tr>
+    <tr>
+      <th>10</th>
       <td>Available</td>
       <td></td>
-      <td>0.27125</td>
+      <td></td>
+      <td>Available</td>
+      <td>0.21726</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>0.03932</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.02892</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.02249</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td>0.00951</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00862</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00584</td>
     </tr>
     <tr>
       <th>0</th>
       <td>Available</td>
+      <td>Available</td>
       <td></td>
       <td>Available</td>
-      <td>Available</td>
-      <td>0.13411</td>
+      <td>0.00520</td>
     </tr>
     <tr>
-      <th>4</th>
+      <th>8</th>
       <td>Available</td>
-      <td></td>
-      <td></td>
       <td>Available</td>
-      <td>0.13353</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00414</td>
     </tr>
     <tr>
-      <th>6</th>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>0.00009</td>
-    </tr>
-    <tr>
-      <th>5</th>
+      <th>12</th>
       <td></td>
       <td></td>
       <td>Available</td>
       <td></td>
-      <td>0.00005</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>Available</td>
-      <td>0.00002</td>
+      <td>0.00113</td>
     </tr>
     <tr>
       <th>7</th>
@@ -1552,7 +2233,39 @@ display_merged_filtered_results(counts, titles, total_results, combinations, lab
       <td></td>
       <td>Available</td>
       <td>Available</td>
-      <td>0.00002</td>
+      <td>0.00059</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td>0.00045</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00024</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00020</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00018</td>
     </tr>
   </tbody>
 </table>
@@ -1578,60 +2291,92 @@ display_merged_filtered_results(counts, titles, total_results, combinations, lab
   </thead>
   <tbody>
     <tr>
-      <th>1</th>
-      <td>Available</td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>0.47828</td>
-    </tr>
-    <tr>
       <th>2</th>
       <td>Available</td>
       <td></td>
+      <td></td>
+      <td></td>
+      <td>0.68416</td>
+    </tr>
+    <tr>
+      <th>10</th>
       <td>Available</td>
       <td></td>
-      <td>0.27232</td>
+      <td></td>
+      <td>Available</td>
+      <td>0.19886</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>0.03622</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.02901</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.01904</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td>0.00935</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00722</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00516</td>
     </tr>
     <tr>
       <th>0</th>
       <td>Available</td>
+      <td>Available</td>
       <td></td>
       <td>Available</td>
-      <td>Available</td>
-      <td>0.12519</td>
+      <td>0.00472</td>
     </tr>
     <tr>
-      <th>4</th>
+      <th>8</th>
       <td>Available</td>
-      <td></td>
-      <td></td>
       <td>Available</td>
-      <td>0.12397</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00376</td>
     </tr>
     <tr>
-      <th>6</th>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>0.00015</td>
-    </tr>
-    <tr>
-      <th>5</th>
+      <th>12</th>
       <td></td>
       <td></td>
       <td>Available</td>
       <td></td>
-      <td>0.00005</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>Available</td>
-      <td>0.00002</td>
+      <td>0.00104</td>
     </tr>
     <tr>
       <th>7</th>
@@ -1639,7 +2384,39 @@ display_merged_filtered_results(counts, titles, total_results, combinations, lab
       <td></td>
       <td>Available</td>
       <td>Available</td>
-      <td>0.00002</td>
+      <td>0.00050</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td>0.00047</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00020</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00018</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00011</td>
     </tr>
   </tbody>
 </table>
@@ -1669,76 +2446,124 @@ display_merged_filtered_results(counts, titles, total_results, combinations, lab
   </thead>
   <tbody>
     <tr>
-      <th>0</th>
-      <td>Available</td>
-      <td></td>
-      <td>Available</td>
-      <td>Available</td>
-      <td>0.30124</td>
-      <td>0.19097</td>
-      <td>0.13411</td>
-      <td>0.12519</td>
-      <td>0.15043</td>
-    </tr>
-    <tr>
       <th>2</th>
       <td>Available</td>
       <td></td>
+      <td></td>
+      <td></td>
+      <td>0.42921</td>
+      <td>0.58081</td>
+      <td>0.65590</td>
+      <td>0.68416</td>
+      <td>0.62725</td>
+    </tr>
+    <tr>
+      <th>10</th>
       <td>Available</td>
       <td></td>
-      <td>0.25782</td>
-      <td>0.24523</td>
-      <td>0.27125</td>
-      <td>0.27232</td>
-      <td>0.26897</td>
+      <td></td>
+      <td>Available</td>
+      <td>0.37171</td>
+      <td>0.27560</td>
+      <td>0.21726</td>
+      <td>0.19886</td>
+      <td>0.23407</td>
     </tr>
     <tr>
       <th>1</th>
       <td>Available</td>
       <td></td>
-      <td></td>
-      <td></td>
-      <td>0.25026</td>
-      <td>0.37644</td>
-      <td>0.46093</td>
-      <td>0.47828</td>
-      <td>0.44747</td>
-    </tr>
-    <tr>
-      <th>4</th>
       <td>Available</td>
-      <td></td>
-      <td></td>
       <td>Available</td>
-      <td>0.19053</td>
-      <td>0.18718</td>
-      <td>0.13353</td>
-      <td>0.12397</td>
-      <td>0.13290</td>
+      <td>0.06815</td>
+      <td>0.03264</td>
+      <td>0.02249</td>
+      <td>0.01904</td>
+      <td>0.03081</td>
     </tr>
     <tr>
       <th>3</th>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>0.05122</td>
+      <td>0.04266</td>
+      <td>0.03932</td>
+      <td>0.03622</td>
+      <td>0.03869</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.01944</td>
+      <td>0.02649</td>
+      <td>0.02892</td>
+      <td>0.02901</td>
+      <td>0.03016</td>
+    </tr>
+    <tr>
+      <th>15</th>
       <td></td>
       <td></td>
       <td></td>
       <td>Available</td>
-      <td>0.00005</td>
-      <td>0.00002</td>
-      <td>0.00002</td>
-      <td>0.00002</td>
-      <td>0.00003</td>
+      <td>0.01649</td>
+      <td>0.01156</td>
+      <td>0.00862</td>
+      <td>0.00722</td>
+      <td>0.00972</td>
     </tr>
     <tr>
-      <th>6</th>
+      <th>8</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.01133</td>
+      <td>0.00537</td>
+      <td>0.00414</td>
+      <td>0.00376</td>
+      <td>0.00553</td>
+    </tr>
+    <tr>
+      <th>0</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>0.01046</td>
+      <td>0.00623</td>
+      <td>0.00520</td>
+      <td>0.00472</td>
+      <td>0.00603</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Available</td>
+      <td>Available</td>
       <td></td>
       <td></td>
+      <td>0.00926</td>
+      <td>0.00916</td>
+      <td>0.00951</td>
+      <td>0.00935</td>
+      <td>0.00894</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
       <td></td>
-      <td></td>
-      <td>0.00005</td>
-      <td>0.00008</td>
-      <td>0.00009</td>
-      <td>0.00015</td>
-      <td>0.00011</td>
+      <td>0.00783</td>
+      <td>0.00618</td>
+      <td>0.00584</td>
+      <td>0.00516</td>
+      <td>0.00575</td>
     </tr>
     <tr>
       <th>7</th>
@@ -1746,23 +2571,71 @@ display_merged_filtered_results(counts, titles, total_results, combinations, lab
       <td></td>
       <td>Available</td>
       <td>Available</td>
-      <td>0.00003</td>
-      <td>0.00003</td>
-      <td>0.00002</td>
-      <td>0.00002</td>
-      <td>0.00003</td>
+      <td>0.00180</td>
+      <td>0.00085</td>
+      <td>0.00059</td>
+      <td>0.00050</td>
+      <td>0.00082</td>
     </tr>
     <tr>
-      <th>5</th>
+      <th>12</th>
       <td></td>
       <td></td>
       <td>Available</td>
       <td></td>
-      <td>0.00002</td>
-      <td>0.00004</td>
-      <td>0.00005</td>
-      <td>0.00005</td>
-      <td>0.00006</td>
+      <td>0.00154</td>
+      <td>0.00123</td>
+      <td>0.00113</td>
+      <td>0.00104</td>
+      <td>0.00109</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td>Available</td>
+      <td>0.00048</td>
+      <td>0.00031</td>
+      <td>0.00024</td>
+      <td>0.00020</td>
+      <td>0.00027</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td></td>
+      <td>Available</td>
+      <td></td>
+      <td></td>
+      <td>0.00043</td>
+      <td>0.00042</td>
+      <td>0.00045</td>
+      <td>0.00047</td>
+      <td>0.00045</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>Available</td>
+      <td>0.00038</td>
+      <td>0.00021</td>
+      <td>0.00018</td>
+      <td>0.00011</td>
+      <td>0.00019</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td></td>
+      <td>Available</td>
+      <td>Available</td>
+      <td></td>
+      <td>0.00026</td>
+      <td>0.00028</td>
+      <td>0.00020</td>
+      <td>0.00018</td>
+      <td>0.00023</td>
     </tr>
   </tbody>
 </table>
@@ -1789,6 +2662,10 @@ import seaborn as sns
 %matplotlib inline
 sns.set(style="darkgrid")
 ```
+
+    /mnt/anaconda2/lib/python2.7/site-packages/matplotlib/__init__.py:878: UserWarning: axes.color_cycle is deprecated and replaced with axes.prop_cycle; please use the latter.
+      warnings.warn(self.msg_depr % (key, alt_key))
+
 
 
 ```python
@@ -1837,27 +2714,27 @@ plot_addon_distribution(addon_counts)
 ```
 
 
-![png](output_71_0.png)
+![png](output_72_0.png)
 
 
 
-![png](output_71_1.png)
+![png](output_72_1.png)
 
 
 As we can see, there is a substantial number of users that have no addons installed. Nearly all other users have fewer than 10 addons installed. To make the plot a bit easier to read, it's helpful to hide the long tail.
 
 
 ```python
-reasonable_addon_counts = filter(lambda (num_addons, count): num_addons < 20, addon_counts)
+reasonable_addon_counts = filter(lambda (num_addons, count): num_addons < 15, addon_counts)
 plot_addon_distribution(reasonable_addon_counts)
 ```
 
 
-![png](output_73_0.png)
+![png](output_74_0.png)
 
 
 
-![png](output_73_1.png)
+![png](output_74_1.png)
 
 
 $\implies$ To get an evaluation set of a decent size that's at least partly representative, it's important to include users that only have a few addons installed. One idea could be to mask half of the addons that users in the evaluation set have installed. This way, we would be able to include users that only have a few addons installed. If the number of addons is odd, we could uniformly randomly round up or down.
@@ -1891,201 +2768,146 @@ DataFrame(
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>0.58231</td>
+      <td>0.91689</td>
     </tr>
     <tr>
       <th>1</th>
       <td>1</td>
-      <td>0.21227</td>
+      <td>0.06219</td>
     </tr>
     <tr>
       <th>2</th>
       <td>2</td>
-      <td>0.08270</td>
+      <td>0.01440</td>
     </tr>
     <tr>
       <th>3</th>
       <td>3</td>
-      <td>0.04022</td>
+      <td>0.00386</td>
     </tr>
     <tr>
       <th>4</th>
       <td>4</td>
-      <td>0.01996</td>
+      <td>0.00142</td>
     </tr>
     <tr>
       <th>5</th>
       <td>5</td>
-      <td>0.01321</td>
+      <td>0.00062</td>
     </tr>
     <tr>
       <th>6</th>
       <td>6</td>
-      <td>0.01434</td>
+      <td>0.00028</td>
     </tr>
     <tr>
       <th>7</th>
       <td>7</td>
-      <td>0.01957</td>
+      <td>0.00014</td>
     </tr>
     <tr>
       <th>8</th>
       <td>8</td>
-      <td>0.00641</td>
+      <td>0.00008</td>
     </tr>
     <tr>
       <th>9</th>
       <td>9</td>
-      <td>0.00272</td>
+      <td>0.00004</td>
     </tr>
     <tr>
       <th>10</th>
       <td>10</td>
-      <td>0.00169</td>
+      <td>0.00003</td>
     </tr>
     <tr>
       <th>11</th>
       <td>11</td>
-      <td>0.00117</td>
+      <td>0.00001</td>
     </tr>
     <tr>
       <th>12</th>
       <td>12</td>
-      <td>0.00089</td>
+      <td>0.00001</td>
     </tr>
     <tr>
       <th>13</th>
       <td>13</td>
-      <td>0.00058</td>
+      <td>0.00001</td>
     </tr>
     <tr>
       <th>14</th>
       <td>14</td>
-      <td>0.00044</td>
+      <td>0.00000</td>
     </tr>
     <tr>
       <th>15</th>
       <td>15</td>
-      <td>0.00033</td>
+      <td>0.00000</td>
     </tr>
     <tr>
       <th>16</th>
       <td>16</td>
-      <td>0.00026</td>
+      <td>0.00000</td>
     </tr>
     <tr>
       <th>17</th>
       <td>17</td>
-      <td>0.00019</td>
+      <td>0.00000</td>
     </tr>
     <tr>
       <th>18</th>
       <td>18</td>
-      <td>0.00014</td>
+      <td>0.00000</td>
     </tr>
     <tr>
       <th>19</th>
       <td>19</td>
-      <td>0.00011</td>
+      <td>0.00000</td>
     </tr>
     <tr>
       <th>20</th>
       <td>20</td>
-      <td>0.00009</td>
+      <td>0.00000</td>
     </tr>
     <tr>
       <th>21</th>
       <td>21</td>
-      <td>0.00006</td>
+      <td>0.00000</td>
     </tr>
     <tr>
       <th>22</th>
       <td>22</td>
-      <td>0.00006</td>
+      <td>0.00000</td>
     </tr>
     <tr>
       <th>23</th>
       <td>23</td>
-      <td>0.00004</td>
-    </tr>
-    <tr>
-      <th>24</th>
-      <td>24</td>
-      <td>0.00003</td>
-    </tr>
-    <tr>
-      <th>25</th>
-      <td>25</td>
-      <td>0.00003</td>
-    </tr>
-    <tr>
-      <th>26</th>
-      <td>26</td>
-      <td>0.00002</td>
-    </tr>
-    <tr>
-      <th>27</th>
-      <td>27</td>
-      <td>0.00002</td>
-    </tr>
-    <tr>
-      <th>28</th>
-      <td>28</td>
-      <td>0.00002</td>
-    </tr>
-    <tr>
-      <th>29</th>
-      <td>29</td>
-      <td>0.00002</td>
-    </tr>
-    <tr>
-      <th>30</th>
-      <td>30</td>
-      <td>0.00001</td>
-    </tr>
-    <tr>
-      <th>31</th>
-      <td>31</td>
-      <td>0.00001</td>
-    </tr>
-    <tr>
-      <th>32</th>
-      <td>32</td>
-      <td>0.00001</td>
-    </tr>
-    <tr>
-      <th>33</th>
-      <td>33</td>
-      <td>0.00001</td>
-    </tr>
-    <tr>
-      <th>34</th>
-      <td>34</td>
       <td>0.00000</td>
     </tr>
     <tr>
-      <th>35</th>
-      <td>35</td>
-      <td>0.00001</td>
+      <th>24</th>
+      <td>27</td>
+      <td>0.00000</td>
     </tr>
     <tr>
-      <th>36</th>
+      <th>25</th>
+      <td>28</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>31</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <th>27</th>
       <td>36</td>
       <td>0.00000</td>
     </tr>
     <tr>
-      <th>37</th>
-      <td>37</td>
-      <td>0.00000</td>
-    </tr>
-    <tr>
-      <th>38</th>
-      <td>38</td>
-      <td>0.00000</td>
-    </tr>
-    <tr>
-      <th>39</th>
-      <td>39</td>
+      <th>28</th>
+      <td>45</td>
       <td>0.00000</td>
     </tr>
   </tbody>
