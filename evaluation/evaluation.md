@@ -50,8 +50,8 @@ ON l.client_id = non_system_addons.client_id
 rdd = frame.rdd
 ```
 
-    CPU times: user 140 ms, sys: 12 ms, total: 152 ms
-    Wall time: 18min 43s
+    CPU times: user 196 ms, sys: 68 ms, total: 264 ms
+    Wall time: 19min 5s
 
 
 ## Loading addon data (AMO)
@@ -110,6 +110,8 @@ def load_amo_external_whitelist():
 whitelist = set(load_amo_external_whitelist())
 ```
 
+    INFO:botocore.vendored.requests.packages.urllib3.connectionpool:Starting new HTTP connection (1): 169.254.169.254
+    INFO:botocore.vendored.requests.packages.urllib3.connectionpool:Starting new HTTP connection (1): 169.254.169.254
     INFO:botocore.vendored.requests.packages.urllib3.connectionpool:Starting new HTTPS connection (1): s3-us-west-2.amazonaws.com
 
 
@@ -189,6 +191,8 @@ recommenders = {
 
     INFO:requests.packages.urllib3.connectionpool:Starting new HTTPS connection (1): s3-us-west-2.amazonaws.com
     INFO:requests.packages.urllib3.connectionpool:Starting new HTTPS connection (1): s3-us-west-2.amazonaws.com
+    INFO:botocore.vendored.requests.packages.urllib3.connectionpool:Starting new HTTPS connection (1): s3-us-west-2.amazonaws.com
+    INFO:botocore.vendored.requests.packages.urllib3.connectionpool:Starting new HTTPS connection (1): s3-us-west-2.amazonaws.com
 
 
 
@@ -1763,4 +1767,329 @@ display_merged_filtered_results(counts, titles, total_results, combinations, lab
   </tbody>
 </table>
 </div>
+
+
+## Addon counts
+
+We want to train an ensemble model using the individual recommenders that we already have. To optimize this ensemble model, we need some training data. We have information about what addons different users have installed, so it would make sense to check if our ensemble model would also recommend these addons to the respective users.
+
+However, there is one fundamental conflict here: To be able to make recommendations, the collaborative recommender already needs some information about which addons a user has installed. Thus, we can only use a subset of a user's installed addons for evaluation. These addons are masked and the collaborative recommender then only uses the unmasked addons. The open question is how large this subset of masked addons should be.
+
+Choosing this size is a trade-off between three factors:
+1. By masking more addons, we give the evaluation function more data to work with
+2. If we mask fewer addons, the collaborative filter can make better recommendations
+3. There are not that many users who have many addons installed. This means we need to be careful not to make our evaluation set too biased. For example, if we always mask at least five addons, then only users with more than six addons could be part of the evaluation set, which is a small subset of the entire population
+
+To be able to make this decision, it's helpful to look at the distribution of the number of addons that users have installed.
+
+
+```python
+import matplotlib.pyplot as plt
+import seaborn as sns
+%matplotlib inline
+sns.set(style="darkgrid")
+```
+
+
+```python
+addon_counts = rdd_completed\
+    .map(lambda client: len(client['installed_addons']))\
+    .map(lambda x: (x, 1))\
+    .reduceByKey(add)\
+    .collect()
+    
+addon_counts = sorted(addon_counts, key=itemgetter(0))
+```
+
+
+```python
+def addon_counts_to_proportions(addon_counts):
+    num_addons, num_addons_count = zip(*addon_counts)
+    
+    num_addons_total = float(sum(num_addons_count))
+    num_addons_count = np.array(num_addons_count) / num_addons_total
+    
+    return num_addons, num_addons_count
+```
+
+
+```python
+def plot_addon_distribution(addon_counts):
+    num_addons, num_addons_count = addon_counts_to_proportions(addon_counts)
+    
+    plt.bar(num_addons, num_addons_count, width=1.)
+    plt.title("Number of addons per user")
+    plt.xlabel("Number of addons")
+    plt.ylabel("Proportion of users")
+    plt.show()
+    
+    plt.plot(np.cumsum(num_addons_count))
+    plt.title("Number of addons per user (cumulative)")
+    plt.xlabel("Number of addons")
+    plt.ylabel("Proportion of users")
+    plt.ylim(0, 1)
+    plt.show()
+```
+
+
+```python
+plot_addon_distribution(addon_counts)
+```
+
+
+![png](output_71_0.png)
+
+
+
+![png](output_71_1.png)
+
+
+As we can see, there is a substantial number of users that have no addons installed. Nearly all other users have fewer than 10 addons installed. To make the plot a bit easier to read, it's helpful to hide the long tail.
+
+
+```python
+reasonable_addon_counts = filter(lambda (num_addons, count): num_addons < 20, addon_counts)
+plot_addon_distribution(reasonable_addon_counts)
+```
+
+
+![png](output_73_0.png)
+
+
+
+![png](output_73_1.png)
+
+
+$\implies$ To get an evaluation set of a decent size that's at least partly representative, it's important to include users that only have a few addons installed. One idea could be to mask half of the addons that users in the evaluation set have installed. This way, we would be able to include users that only have a few addons installed. If the number of addons is odd, we could uniformly randomly round up or down.
+
+The alternative would be to make the portion of masked addons a little bit higher or lower. This could make sense if we notice that the collaborative recommender is generally able to make much better recommendations using two addons than using one addon; or, the other way around, if we notice that it adds little value to evaluate based on a single addon.
+
+
+```python
+num_addons, num_addons_count = addon_counts_to_proportions(addon_counts)
+num_addons_count = map(format_frequency, num_addons_count)
+
+DataFrame(
+    columns=["Number of addons", "Proportion"],
+    data=zip(num_addons, num_addons_count)
+).head(40)
+```
+
+
+
+
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Number of addons</th>
+      <th>Proportion</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0</td>
+      <td>0.58231</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1</td>
+      <td>0.21227</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2</td>
+      <td>0.08270</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>3</td>
+      <td>0.04022</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>4</td>
+      <td>0.01996</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>5</td>
+      <td>0.01321</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>6</td>
+      <td>0.01434</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>7</td>
+      <td>0.01957</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>8</td>
+      <td>0.00641</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>9</td>
+      <td>0.00272</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>10</td>
+      <td>0.00169</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>11</td>
+      <td>0.00117</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>12</td>
+      <td>0.00089</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>13</td>
+      <td>0.00058</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>14</td>
+      <td>0.00044</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>15</td>
+      <td>0.00033</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>16</td>
+      <td>0.00026</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>17</td>
+      <td>0.00019</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>18</td>
+      <td>0.00014</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>19</td>
+      <td>0.00011</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>20</td>
+      <td>0.00009</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>21</td>
+      <td>0.00006</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>22</td>
+      <td>0.00006</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>23</td>
+      <td>0.00004</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>24</td>
+      <td>0.00003</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>25</td>
+      <td>0.00003</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>26</td>
+      <td>0.00002</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>27</td>
+      <td>0.00002</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>28</td>
+      <td>0.00002</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>29</td>
+      <td>0.00002</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>30</td>
+      <td>0.00001</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>31</td>
+      <td>0.00001</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>32</td>
+      <td>0.00001</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>33</td>
+      <td>0.00001</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>34</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>35</td>
+      <td>0.00001</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>36</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>37</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>38</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>39</td>
+      <td>0.00000</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
 
