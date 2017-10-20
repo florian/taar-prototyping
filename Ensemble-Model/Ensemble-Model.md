@@ -57,8 +57,8 @@ ON l.client_id = non_system_addons.client_id
 rdd = frame.rdd
 ```
 
-    CPU times: user 24 ms, sys: 4 ms, total: 28 ms
-    Wall time: 2min 50s
+    CPU times: user 20 ms, sys: 4 ms, total: 24 ms
+    Wall time: 2min 29s
 
 
 
@@ -701,119 +701,84 @@ recommenders.keys()
 
 
 
+We're using the [COBYLA](https://en.wikipedia.org/wiki/COBYLA) algorithm for optimization. There is no theoretical reason for this, it just seems to work pretty well here and finds good results fairly quickly. Of course other algorithms could be used instead of COBYLA here.
+
 
 ```python
 num_features = len(recommenders)
 x0 = get_initial_guess(num_features)
 print "Initial guess:", x0
-best_weights = minimize(verbose_cost, x0, method="COBYLA", tol=1e-5)
+best_weights = minimize(verbose_cost, x0, method="COBYLA", tol=1e-5).x
 ```
 
-    Initial guess: [ 0.48533936  0.55636737  0.13108097  0.47268632]
-    New guess: [ 0.48533936  0.55636737  0.13108097  0.47268632] leads to a cost of 0.705378749967
-    New guess: [ 1.48533936  0.55636737  0.13108097  0.47268632] leads to a cost of 0.651060536695
-    New guess: [ 1.48533936  1.55636737  0.13108097  0.47268632] leads to a cost of 0.650813378865
-    New guess: [ 1.48533936  1.55636737  1.13108097  0.47268632] leads to a cost of 0.649310991464
-    New guess: [ 1.48533936  1.55636737  1.13108097  1.47268632] leads to a cost of 0.705340053019
-    New guess: [ 2.1812669   1.55953397  1.15032963 -0.24516069] leads to a cost of 0.649269068547
-    New guess: [ 1.82239216  1.56106918  1.15966164 -0.59318293] leads to a cost of 0.68011649334
-    New guess: [ 2.1812669   1.80953154  1.15032963 -0.24405789] leads to a cost of 0.649252783755
-    New guess: [ 2.54022724  1.80852452  1.16249432  0.10379047] leads to a cost of 0.644256645414
-    New guess: [ 2.89564561  1.81024236  1.23708028  0.44746439] leads to a cost of 0.647646561847
-    New guess: [ 2.53251318  1.80852796  1.41237407  0.10301236] leads to a cost of 0.64414121662
-    New guess: [ 2.89159066  1.81025698  1.44762664  0.44915919] leads to a cost of 0.647528399838
-    New guess: [ 2.70572828  1.81110052  1.41716028 -0.07717366] leads to a cost of 0.649620313481
-    New guess: [ 2.28389193  2.22015535  1.41074175  0.2399346 ] leads to a cost of 0.646261875537
-    New guess: [ 2.3711054   1.63964133  1.41141717  0.19202877] leads to a cost of 0.644120853605
-    New guess: [ 2.43505878  1.63485173  1.4144207   0.29928083] leads to a cost of 0.647186124565
-    New guess: [ 2.33574054  1.685659    1.41039694  0.2152001 ] leads to a cost of 0.644750594415
-    New guess: [ 2.33845164  1.60879409  1.41222374  0.07538174] leads to a cost of 0.6440917324
-    New guess: [ 2.33772888  1.60938307  1.47471495  0.07586042] leads to a cost of 0.644009589544
-    New guess: [ 2.42535171  1.52196521  1.49168655  0.07169822] leads to a cost of 0.644082512942
-    New guess: [ 2.29709238  1.56753478  1.47446749  0.0983011 ] leads to a cost of 0.64400555768
-    New guess: [ 2.24370841  1.603316    1.58074647  0.08417185] leads to a cost of 0.643783705506
-    New guess: [ 2.1748745   1.65692838  1.66953226  0.07278378] leads to a cost of 0.643679245126
-    New guess: [ 2.12358501  1.58085683  1.75219668  0.09212549] leads to a cost of 0.643510185439
-    New guess: [ 2.07508988  1.54715919  1.86234429  0.09440456] leads to a cost of 0.643346269316
-    New guess: [ 1.97422953  1.50420451  1.92233998  0.09164693] leads to a cost of 0.643221598451
-    New guess: [ 1.92453869  1.54478908  2.0288606   0.07891627] leads to a cost of 0.643100799414
-    New guess: [  1.91327092e+00   1.49329991e+00   2.11136456e+00   1.19884174e-03] leads to a cost of 0.642887265516
-    New guess: [ 1.89970632  1.44082328  2.19936718 -0.06910581] leads to a cost of 0.648365353754
-    New guess: [ 1.9394283   1.46718024  2.13858713  0.04361035] leads to a cost of 0.642944585739
-    New guess: [ 1.87403908  1.4741998   2.16067306 -0.10505426] leads to a cost of 0.648523392245
-    New guess: [ 1.8630001   1.46215876  2.10191668  0.01908909] leads to a cost of 0.642836652223
-    New guess: [ 1.79043854  1.42201217  2.14060563 -0.0660651 ] leads to a cost of 0.648279810268
-    New guess: [ 1.84250083  1.50948094  2.11467384  0.05201167] leads to a cost of 0.642835425061
-    New guess: [ 1.85109713  1.51133039  2.08771818  0.06515085] leads to a cost of 0.642949187669
-    New guess: [ 1.80931759  1.50574013  2.15730912  0.02081292] leads to a cost of 0.642694870633
-    New guess: [ 1.76667561  1.502212    2.1889827  -0.01193228] leads to a cost of 0.647967626059
-    New guess: [ 1.79880642  1.51868732  2.1374796   0.00334186] leads to a cost of 0.642653097722
-    New guess: [ 1.75406654  1.52468942  2.15130157 -0.0376157 ] leads to a cost of 0.648104492346
-    New guess: [ 1.79964796  1.5344976   2.12561853  0.02753286] leads to a cost of 0.642590926776
-    New guess: [ 1.80705948  1.54562394  2.13258086  0.02341699] leads to a cost of 0.642582412926
-    New guess: [ 1.8324307   1.5378759   2.11636947  0.02025117] leads to a cost of 0.642677453204
-    New guess: [ 1.78610746  1.56740136  2.13436564  0.03117161] leads to a cost of 0.642475887687
-    New guess: [ 1.7683422   1.58515616  2.14444783  0.0467945 ] leads to a cost of 0.642573293813
-    New guess: [ 1.78251233  1.58042962  2.11065488  0.01594986] leads to a cost of 0.642605513884
-    New guess: [ 1.78054623  1.57035675  2.14462481  0.04113296] leads to a cost of 0.642521020339
-    New guess: [ 1.78979051  1.56933176  2.13055628  0.03657832] leads to a cost of 0.64257366894
-    New guess: [ 1.77703572  1.56832422  2.13649636  0.01866351] leads to a cost of 0.642569818419
-    New guess: [ 1.7906249   1.57231243  2.13768078  0.02882232] leads to a cost of 0.642538645867
-    New guess: [ 1.78376045  1.56875883  2.12087857  0.03858027] leads to a cost of 0.642550225269
-    New guess: [ 1.78849908  1.56008802  2.13555681  0.03181311] leads to a cost of 0.642469661922
-    New guess: [ 1.78565927  1.55881203  2.13576351  0.02946291] leads to a cost of 0.64247162563
-    New guess: [ 1.78922731  1.55999212  2.13402434  0.03085045] leads to a cost of 0.642479782485
-    New guess: [ 1.78643644  1.55929605  2.13500109  0.03498616] leads to a cost of 0.642503024201
-    New guess: [ 1.78981947  1.5607      2.1389024   0.03041745] leads to a cost of 0.642470606799
-    New guess: [ 1.78960884  1.5600329   2.13455655  0.0305563 ] leads to a cost of 0.642479242455
-    New guess: [ 1.78884385  1.55924235  2.13589509  0.0318854 ] leads to a cost of 0.6424696855
-    New guess: [ 1.78872172  1.56083818  2.13729181  0.03137475] leads to a cost of 0.642469648976
-    New guess: [ 1.78822472  1.56081853  2.1375662   0.0321691 ] leads to a cost of 0.642469917759
-    New guess: [ 1.78910145  1.56099475  2.13724084  0.03163382] leads to a cost of 0.642470818033
-    New guess: [ 1.78802074  1.56053936  2.13736066  0.0307679 ] leads to a cost of 0.642470238001
-    New guess: [ 1.78855447  1.56126247  2.13712095  0.03133963] leads to a cost of 0.64246964511
-    New guess: [ 1.78944912  1.56156296  2.13692692  0.03149883] leads to a cost of 0.642468703147
-    New guess: [ 1.79031974  1.5618698   2.13675835  0.03176924] leads to a cost of 0.642471907823
-    New guess: [ 1.78939493  1.5613792   2.13649193  0.03161064] leads to a cost of 0.64246956174
-    New guess: [ 1.78888366  1.56227688  2.13682278  0.03116207] leads to a cost of 0.642470407271
-    New guess: [ 1.78949446  1.56130329  2.13703048  0.03110107] leads to a cost of 0.642468636616
-    New guess: [ 1.78930409  1.56119788  2.1371166   0.03117061] leads to a cost of 0.642468161724
-    New guess: [ 1.78930827  1.56101723  2.13752343  0.03137126] leads to a cost of 0.642468951299
-    New guess: [ 1.78892824  1.56143402  2.13716901  0.03097404] leads to a cost of 0.642471136252
-    New guess: [ 1.78930413  1.5610224   2.13696234  0.03124144] leads to a cost of 0.642467927256
-    New guess: [ 1.78931129  1.56096071  2.13698544  0.03113891] leads to a cost of 0.642468350679
-    New guess: [ 1.78913381  1.56110079  2.13685241  0.03135263] leads to a cost of 0.642467895216
-    New guess: [ 1.78908565  1.56104591  2.13693722  0.0314014 ] leads to a cost of 0.642468252896
-    New guess: [ 1.78930455  1.56117993  2.13675174  0.03147118] leads to a cost of 0.642468703147
-    New guess: [ 1.78914061  1.56119741  2.13692572  0.03134059] leads to a cost of 0.64246789135
-    New guess: [ 1.78899322  1.5612648   2.13682717  0.03118688] leads to a cost of 0.642467977338
-    New guess: [ 1.78920341  1.56115866  2.1369562   0.03124825] leads to a cost of 0.642467901602
-    New guess: [ 1.78922145  1.56125043  2.13685221  0.03135291] leads to a cost of 0.642468309046
-    New guess: [ 1.78909777  1.5612084   2.13690914  0.03130194] leads to a cost of 0.64246783806
-    New guess: [ 1.78908268  1.56119342  2.1369308   0.03130511] leads to a cost of 0.642467830073
-    New guess: [ 1.78903065  1.56119853  2.13692727  0.03127382] leads to a cost of 0.642469730839
-    New guess: [ 1.78906923  1.56120367  2.13692489  0.03132982] leads to a cost of 0.642467398037
-    New guess: [ 1.78909932  1.56122045  2.13695178  0.03137242] leads to a cost of 0.642468252798
-    New guess: [ 1.78907354  1.5611577   2.13689284  0.03135361] leads to a cost of 0.642467887229
-    New guess: [ 1.78904312  1.56121681  2.13691663  0.03132686] leads to a cost of 0.642467398037
-    New guess: [ 1.78907067  1.56121267  2.13693081  0.03134053] leads to a cost of 0.642467364919
-    New guess: [ 1.78906693  1.56120876  2.13693613  0.03134138] leads to a cost of 0.642467364919
-    New guess: [ 1.78906875  1.56120668  2.13692319  0.03135216] leads to a cost of 0.642467887229
-    New guess: [ 1.7890772   1.56120938  2.13693288  0.03134127] leads to a cost of 0.642467364919
-    New guess: [ 1.78907283  1.56122012  2.1369394   0.03133059] leads to a cost of 0.642467398037
-    New guess: [ 1.78907033  1.56121341  2.13692953  0.03135041] leads to a cost of 0.642467887229
-
-
-
-```python
-cost([1.278125, 1., 1.8171874999999997, 0.10707070707070707])
-```
-
-
-
-
-    0.64280133639614734
-
+    Initial guess: [ 0.92298266  0.80952834  0.47482559  0.93028254]
+    New guess: [ 0.92298266  0.80952834  0.47482559  0.93028254] leads to a cost of 0.70481583848
+    New guess: [ 1.92298266  0.80952834  0.47482559  0.93028254] leads to a cost of 0.683259673786
+    New guess: [ 1.92298266  1.80952834  0.47482559  0.93028254] leads to a cost of 0.682828731505
+    New guess: [ 1.92298266  1.80952834  1.47482559  0.93028254] leads to a cost of 0.677545615984
+    New guess: [ 1.92298266  1.80952834  1.47482559  1.93028254] leads to a cost of 0.704320141592
+    New guess: [ 2.54277091  1.8219189   1.62672706  0.16045467] leads to a cost of 0.644513981539
+    New guess: [ 3.10869844  1.83493605  1.7863102  -0.64830352] leads to a cost of 0.653830802141
+    New guess: [ 2.82573467  1.82842748  1.70651863 -0.24392442] leads to a cost of 0.650168526742
+    New guess: [ 2.34803908  1.8219189   1.62672706  0.00367612] leads to a cost of 0.644276588671
+    New guess: [ 2.64621403  1.82843916  1.70666192 -0.38959174] leads to a cost of 0.650625584604
+    New guess: [ 2.34594988  2.07189664  1.62689649  0.00627108] leads to a cost of 0.644170271356
+    New guess: [ 2.21974184  2.07285995  2.08903624  0.14944043] leads to a cost of 0.643864945793
+    New guess: [ 1.89709424  2.08308918  1.92022466  0.49192625] leads to a cost of 0.646968490192
+    New guess: [ 2.32789588  2.0921582   2.2038969  -0.04352929] leads to a cost of 0.649392835458
+    New guess: [ 2.11333109  2.07265118  2.08010597  0.08446382] leads to a cost of 0.64377707068
+    New guess: [ 1.99002108  2.07436896  1.99219151  0.28336766] leads to a cost of 0.646458215236
+    New guess: [ 2.11360958  2.19764782  2.0801908   0.08359446] leads to a cost of 0.64379046169
+    New guess: [ 2.21049135  2.06846178  2.18538188 -0.12037592] leads to a cost of 0.649653816166
+    New guess: [ 2.16191122  2.07055648  2.13274393 -0.01795605] leads to a cost of 0.649351114205
+    New guess: [ 2.09595331  2.07279573  2.13645453  0.10517811] leads to a cost of 0.643720436561
+    New guess: [ 2.03797441  2.07334341  2.08527885  0.20338299] leads to a cost of 0.645379102778
+    New guess: [ 2.11967882  2.0718779   2.16661094  0.05585166] leads to a cost of 0.643785403169
+    New guess: [ 2.09577172  2.04154928  2.13632595  0.10559357] leads to a cost of 0.643710495351
+    New guess: [ 2.04422612  2.03017339  2.14686283  0.13735619] leads to a cost of 0.643844416004
+    New guess: [ 2.14362396  2.03913569  2.14496242  0.1447854 ] leads to a cost of 0.643881223236
+    New guess: [ 2.09633595  2.03945135  2.15174423  0.07849893] leads to a cost of 0.643696912763
+    New guess: [ 2.10316765  2.03945547  2.16389608  0.08555592] leads to a cost of 0.64368751853
+    New guess: [ 2.13316467  2.03504251  2.16124672  0.07846737] leads to a cost of 0.643726021865
+    New guess: [ 2.0827792   2.03394638  2.18656235  0.08965028] leads to a cost of 0.64370474659
+    New guess: [ 2.10290283  2.054895    2.16609241  0.08462445] leads to a cost of 0.643682454215
+    New guess: [ 2.10087471  2.0556882   2.16320964  0.09155138] leads to a cost of 0.643663234232
+    New guess: [ 2.10250859  2.05918165  2.15847246  0.10593283] leads to a cost of 0.643720032552
+    New guess: [ 2.09401137  2.05407414  2.1658778   0.09360208] leads to a cost of 0.643670862285
+    New guess: [ 2.10180827  2.06418224  2.17094645  0.0810033 ] leads to a cost of 0.643688973126
+    New guess: [ 2.09762119  2.05666936  2.15697182  0.08829919] leads to a cost of 0.643673629311
+    New guess: [ 2.10320981  2.04867106  2.16387853  0.08912346] leads to a cost of 0.643670738137
+    New guess: [ 2.10138011  2.05761482  2.16559307  0.08918268] leads to a cost of 0.643669899197
+    New guess: [ 2.10270248  2.05628293  2.16249433  0.09487594] leads to a cost of 0.643668336993
+    New guess: [ 2.1003321   2.05594746  2.16147325  0.09088954] leads to a cost of 0.643665414376
+    New guess: [ 2.10011276  2.05614347  2.16337364  0.09192413] leads to a cost of 0.643662699314
+    New guess: [ 2.09911257  2.05457339  2.16389872  0.09219518] leads to a cost of 0.64366146201
+    New guess: [ 2.09848905  2.05465737  2.16558374  0.09143388] leads to a cost of 0.643659863805
+    New guess: [ 2.09806703  2.05443576  2.16727347  0.09228962] leads to a cost of 0.643659828128
+    New guess: [ 2.09726348  2.05490157  2.16703823  0.09247847] leads to a cost of 0.643660074734
+    New guess: [ 2.0974859   2.05354516  2.16782444  0.09074681] leads to a cost of 0.643662872148
+    New guess: [ 2.09893898  2.0560786   2.16782747  0.09206931] leads to a cost of 0.643660102617
+    New guess: [ 2.09846868  2.05435243  2.16695516  0.09311671] leads to a cost of 0.643659868625
+    New guess: [ 2.09829882  2.05484491  2.16740192  0.09226152] leads to a cost of 0.643659541738
+    New guess: [ 2.09862907  2.05513668  2.16758835  0.09216423] leads to a cost of 0.643659491796
+    New guess: [ 2.09839081  2.05554234  2.16753013  0.0922813 ] leads to a cost of 0.643659927876
+    New guess: [ 2.0985701   2.05510278  2.16779929  0.09226662] leads to a cost of 0.643659585035
+    New guess: [ 2.09882433  2.05487584  2.16758039  0.09180066] leads to a cost of 0.643659614623
+    New guess: [ 2.09894348  2.05501919  2.16742686  0.09247996] leads to a cost of 0.643661448305
+    New guess: [ 2.09855716  2.05511271  2.16765027  0.09194057] leads to a cost of 0.643659992214
+    New guess: [ 2.09856409  2.05523417  2.16756798  0.09219179] leads to a cost of 0.643659854984
+    New guess: [ 2.09867124  2.05517271  2.1676113   0.09215317] leads to a cost of 0.643659446062
+    New guess: [ 2.09877068  2.05511418  2.16759821  0.09219078] leads to a cost of 0.643659741806
+    New guess: [ 2.09866484  2.05516     2.16763123  0.09209726] leads to a cost of 0.643659835669
+    New guess: [ 2.09867646  2.05517999  2.1675846   0.0921414 ] leads to a cost of 0.643659620469
+    New guess: [ 2.09865439  2.05519963  2.16763462  0.09219978] leads to a cost of 0.643659846133
+    New guess: [ 2.09869178  2.0551524   2.16761222  0.09216297] leads to a cost of 0.643659456912
+    New guess: [ 2.09866067  2.05516321  2.16760646  0.09215591] leads to a cost of 0.643659446059
+    New guess: [ 2.09866061  2.05516627  2.16760435  0.09216257] leads to a cost of 0.643659441699
+    New guess: [ 2.09865596  2.05516635  2.16761766  0.09216839] leads to a cost of 0.643659490954
+    New guess: [ 2.09865563  2.05517139  2.16760371  0.09215997] leads to a cost of 0.643659446318
+    New guess: [ 2.09866689  2.05516597  2.1675905   0.0921613 ] leads to a cost of 0.643659446039
+    New guess: [ 2.09866473  2.05516607  2.16759527  0.09216174] leads to a cost of 0.643659445519
 
 
 ### Experimental: Grid search
@@ -1048,6 +1013,163 @@ cost(best_weights, X_test)
 
 
 
-    0.64363248228167091
+    0.64123918634900057
+
+
+
+## Optimizing on a subset with some manual decisions
+
+When looking at the results so far, it seems like the locale and collaborative recommenders are the most important ones. The legacy recommender is also useful, but it can rarely be used and by using it we don't really optimize for MAP. Changes to the similarity recommender's weight also only lead to a small change.
+
+Because of this, this section first tries to optimize for locale/collaborative weights using a grid search. Afterwards, we fix these weights and find the best weight for the similarity recommender. This grid search is quite expensive, so we'll work on a smaller subset of the data.
+
+Generally, the results using the subset are in the same ballpark, but of course there are still some differences.
+
+**Disclaimer:** This section is very much experimental and the code is not perfectly refactored
+
+
+```python
+from itertools import product
+```
+
+
+```python
+X_full = X
+```
+
+
+```python
+X = X_full.sample(False, 0.1).cache()
+```
+
+
+```python
+n = 65
+locale = np.linspace(0.2, 2.5, num=n)
+collaborative = np.linspace(0.2, 2.5, num=n)
+```
+
+
+```python
+%time z = [cost([x, 1., y, .11], X) for x, y in product(locale, collaborative)]
+```
+
+    CPU times: user 4min 57s, sys: 24.4 s, total: 5min 22s
+    Wall time: 27min 26s
+
+
+
+```python
+xx, yy = np.meshgrid(locale, collaborative)
+x = xx.ravel()
+y = yy.ravel()
+```
+
+This plot isn't really informative, because there are some areas with very bad parameters which lead to the plot being mostly blue.
+
+
+```python
+hb = plt.hexbin(x, y, C=z, gridsize=30, cmap='jet')
+plt.colorbar(hb)
+plt.xlabel("Collaborative")
+plt.ylabel("Locale")
+plt.show()
+```
+
+
+![png](output_110_0.png)
+
+
+To fix this, we can cut off all the results with cost > 0.65, which creates this much more interpretable result:
+
+
+```python
+z2 = np.minimum(z, 0.65)
+```
+
+
+```python
+import matplotlib.pyplot as plt
+%matplotlib inline
+```
+
+
+```python
+hb = plt.hexbin(x, y, C=z2, gridsize=30, cmap='jet')
+plt.colorbar(hb)
+plt.xlabel("Collaborative")
+plt.ylabel("Locale")
+plt.show()
+```
+
+
+![png](output_114_0.png)
+
+
+The optimum seems to be around (1.3, 1.8).
+
+
+```python
+list(product(locale, collaborative))[1995]
+```
+
+
+
+
+    (1.278125, 1.8171874999999997)
+
+
+
+Next, we can try to find the best argument for the similarity recommender when fixing the other weights.
+
+
+```python
+x = np.linspace(0, 0.2, num=100)
+```
+
+
+```python
+y = [cost([1.278125, 1., 1.8171874999999997, xi], X) for xi in x]
+```
+
+
+```python
+plt.plot(x, y)
+```
+
+
+
+
+    [<matplotlib.lines.Line2D at 0x7fb3c33445d0>]
+
+
+
+
+![png](output_120_1.png)
+
+
+
+```python
+x[np.argmin(y)]
+```
+
+
+
+
+    0.10707070707070707
+
+
+
+When evaluating on all of the data, this doesn't really improve the recommender though.
+
+
+```python
+cost([1.278125, 1., 1.8171874999999997, 0.10707070707070707], X_test)
+```
+
+
+
+
+    0.64153074985822722
 
 
